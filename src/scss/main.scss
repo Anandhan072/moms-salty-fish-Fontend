@@ -1,0 +1,52 @@
+@use "variables";
+@use "mixin";
+@use "header";
+@use "home";
+@use "product";
+@use "items";
+@use "login";
+@use "polices";
+@use "userprofile";
+
+* {
+  padding: 0; // Removed percentage to avoid confusion, just use 0
+  margin: 0; // Same as above
+  box-sizing: border-box; // This is the recommended approach to include padding and border in total width/height
+}
+
+html {
+  box-sizing: border-box; // Maintain consistent box-sizing across the document
+  font-size: 62.5%; // This sets the base font size to 10px (62.5% of the default 16px)
+}
+
+body {
+  display: block;
+  position: relative;
+  font-size: 1.6rem;
+  line-height: 1.6;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  overflow-y: scroll;
+
+  font-family: variables.$filter_font;
+  // background-image: url("https://res.cloudinary.com/dzj11mc68/image/upload/v1759509405/Gemini_Generated_Image_e2lszne2lszne2ls-removebg-preview_utsgsq.png");
+  background-position: 100% 100%;
+  background-size: 30rem 30rem;
+}
+
+a,
+button,
+input {
+  outline: none;
+  cursor: pointer;
+  color: black;
+}
+
+a {
+  text-decoration: none;
+}
+
+ul {
+  list-style-type: none;
+}

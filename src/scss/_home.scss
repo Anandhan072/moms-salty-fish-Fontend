@@ -1,0 +1,293 @@
+@use "variables";
+@use "mixin";
+
+#main {
+  display: block;
+  width: 100vw;
+  min-height: 40rem;
+  #banner-main {
+    position: relative;
+    height: 45rem;
+    width: 100%;
+
+    .video-banner {
+      position: relative; // changed to relative
+      height: 100%;
+      width: 100vw;
+      .banner-cont {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        transition: transform 500ms linear;
+        background-image: linear-gradient(
+          to right,
+          variables.$offer_font_color,
+          variables.$white
+        );
+        .video-banner-cont {
+          position: absolute;
+          display: block;
+          height: 45rem;
+          object-fit: cover;
+          z-index: 1;
+        }
+
+        .video-descriptions {
+          position: relative;
+          display: block;
+          z-index: 2 !important;
+          height: 45rem;
+          width: 100vw;
+          .video-descriptions-cont {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            height: 45rem;
+            width: 75rem;
+            margin: auto;
+            text-align: center;
+            mark {
+              position: relative;
+              background-color: rgb(variables.$white, 0.7);
+              padding: 1rem 4rem;
+              margin-bottom: 2rem;
+              a {
+                position: relative;
+                top: 5px;
+              }
+            }
+
+            .visit-more {
+              // style as needed
+              margin-top: 2rem;
+              background-color: rgb(variables.$white, 0.8);
+              padding: 1rem 2rem;
+              color: variables.$black;
+            }
+          }
+        }
+      }
+    }
+    .banner-btn {
+      z-index: 2;
+      padding: 1rem 2rem;
+      border: 1px solid variables.$black;
+      background-color: variables.$white;
+      opacity: 0.2;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+
+      &:hover {
+        opacity: 0.5;
+      }
+    }
+
+    .banner-btn-left {
+      left: 2rem;
+    }
+
+    .banner-btn-right {
+      right: 2rem;
+    }
+  }
+}
+
+#about-moms {
+  display: block;
+  width: 100vw;
+  font-family: variables.$about_moms_font;
+
+  #about-moms-cont {
+    display: flex;
+    width: 70vw;
+    margin: auto;
+    margin-top: 4rem;
+    margin-bottom: 4rem;
+    justify-content: center;
+    align-items: center;
+    gap: 10rem;
+    .moms-cont-photo {
+      img {
+        width: 15vw;
+        border-radius: 50%;
+      }
+    }
+    .moms-cont-text {
+      h2,
+      h4 {
+        font-size: 3rem;
+      }
+      ul {
+        list-style-type: circle;
+        margin-left: 3rem;
+      }
+      p,
+      li {
+        font-size: 2rem;
+        opacity: 0.6;
+        margin-left: 3rem;
+      }
+    }
+  }
+}
+
+#product-sample-main {
+  display: block;
+  width: 100vw;
+  position: relative;
+
+  #product-sample {
+    display: block;
+
+    .product-sample-items {
+      padding: 2rem 0;
+
+      .product-section:nth-child(odd) {
+        background-color: white;
+      }
+      .product-section:nth-child(odd) {
+        background-color: rgb(variables.$font-blue, 0.1);
+      }
+
+      .product-section {
+        position: relative;
+        .product-variates {
+          position: relative;
+          padding: 1rem;
+          left: 6rem;
+          a {
+            font-size: 2rem;
+            letter-spacing: 2px;
+            background-color: variables.$font-blue;
+            padding: 5px 10px;
+            border-radius: 8px;
+            color: variables.$white;
+            font-family: variables.$product_font;
+            font-size: 1.7rem;
+          }
+
+          &:hover {
+            opacity: 1;
+          }
+        }
+
+        .product-containers {
+          display: flex;
+          gap: 5rem;
+          margin: auto;
+          transition: transform 1s linear;
+          padding-left: 5rem;
+          padding-bottom: 5rem;
+          padding-top: 5rem;
+
+          @include mixin.productItems;
+        }
+
+        .product-container-left-btn,
+        .product-container-right-btn {
+          position: absolute;
+          bottom: 96%;
+          z-index: 2;
+          transform: translate(30%, 100%);
+          opacity: 0.5;
+          button {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            border: none;
+          }
+          &:hover {
+            opacity: 1;
+          }
+        }
+        .product-container-right-btn {
+          right: 2%;
+        }
+      }
+    }
+  }
+}
+
+#about {
+  background-color: rgb(variables.$offer_font_color, 0.3);
+  width: 100vw;
+  font-family: variables.$about_moms_font !important;
+  #about-section {
+    padding: 5rem;
+    .about-main {
+      display: flex;
+      justify-content: space-between;
+      .about-logo {
+        span {
+          img {
+            width: 25rem;
+          }
+        }
+      }
+
+      .about-policy {
+        .about-policy-main {
+          .about-policy-list,
+          header {
+            padding: 5px 1rem;
+            margin-bottom: 1rem;
+          }
+          header {
+            background-color: black;
+            text-align: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bolder;
+            border-radius: 4px;
+          }
+          .about-policies {
+            .about-policy-list a:hover {
+              opacity: 1; // override for active link
+            }
+
+            .about-policy-list a {
+              font-size: 1.5rem;
+              display: inline-block;
+              transition: opacity 0.3s ease;
+            }
+          }
+
+          .about-policies:hover .about-policy-list a {
+            opacity: 0.5; /* dim all links */
+          }
+          .about-policies .about-policy-list a:hover {
+            opacity: 1;
+          }
+        }
+      }
+      .about-support {
+        max-width: 40rem;
+        .about-contact-us {
+          margin-bottom: 5rem;
+          .about-support-section-us {
+            font-size: 2rem;
+          }
+          .about-support-section-paragraph > * {
+            margin-top: 2rem;
+          }
+          .about-support-section-paragraph {
+            font-size: 2rem;
+          }
+        }
+        .about-contact-address {
+          .about-support-section-address-line {
+            font-size: 2rem;
+            a {
+              position: relative;
+              top: 5px;
+              left: 5px;
+            }
+          }
+        }
+      }
+    }
+  }
+}

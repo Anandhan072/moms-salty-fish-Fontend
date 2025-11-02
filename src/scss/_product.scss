@@ -1,0 +1,166 @@
+@use "variables";
+@use "mixin";
+
+#url {
+  width: 100vw;
+  padding: 0.5px 2rem;
+  background-color: rgb(variables.$black, 0.8);
+  .url-current-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .url-page-ul-link > *:not(:last-child)::after {
+      content: "/";
+      color: variables.$white;
+      font-size: 1rem;
+    }
+    .url-page-ul-link > *::after {
+      padding: 0 04px 0 4px;
+    }
+    .url-page-ul-link {
+      display: flex;
+
+      .url-page-li-link {
+        .url-page-a-link {
+          font-size: 1rem;
+          color: variables.$white;
+        }
+      }
+    }
+  }
+}
+
+#filter-option {
+  width: 100vw;
+  background-color: rgb(variables.$white, 0.5);
+  padding: 2rem 8rem;
+  display: flex;
+  justify-content: space-between;
+  color: variables.$filter_font_color;
+  font-family: variables.$filter_font;
+
+  svg {
+    width: 15px;
+    fill: variables.$filter_font_color;
+  }
+
+  .product-count {
+    @include mixin.filterBtn;
+  }
+
+  .filter-option-btn {
+    display: flex;
+    gap: 2rem;
+    .filter-all {
+      display: flex;
+      gap: 2rem;
+      > * {
+        @include mixin.filterBtn;
+      }
+      .filter-price {
+        position: relative;
+        cursor: pointer;
+        .filter-price-div {
+          @include mixin.PriceForm;
+          > * {
+            @include mixin.PriceFormHover;
+            border: none;
+            width: 100%;
+            color: rgb(variables.$black, 0.8);
+          }
+        }
+        &:hover > .filter-price-div,
+        .filter-price-div:hover {
+          display: block;
+        }
+      }
+      .filter-availability {
+        position: relative;
+        cursor: pointer;
+
+        .available-filter-div {
+          @include mixin.PriceForm;
+          > * {
+            @include mixin.PriceFormHover;
+            svg {
+              margin-right: 1rem;
+            }
+          }
+        }
+        &:hover > .available-filter-div,
+        .available-filter-div:hover {
+          display: block;
+        }
+      }
+    }
+    .filter-sort {
+      .filter-sort-by {
+        @include mixin.filterBtn;
+        position: relative;
+        cursor: pointer;
+        .filter-sort-by-div {
+          @include mixin.PriceForm;
+          width: 190%;
+          > * {
+            @include mixin.PriceFormHover;
+            svg {
+              margin-right: 1rem;
+            }
+          }
+        }
+        &:hover > .filter-sort-by-div,
+        .filter-sort-by-div:hover {
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+#main-section-product {
+  #product-containers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    width: 95%;
+    margin: auto;
+    @include mixin.productItems;
+  }
+  padding-bottom: 3rem;
+}
+
+#btn-page {
+  display: block;
+  width: 100vw;
+  padding: 2rem;
+
+  .btn-page-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .btn-page-section-preview,
+    .btn-page-section-next {
+      .btn-page-section-preview-btn,
+      .btn-page-section-next-btn {
+        @include mixin.preview-next;
+      }
+    }
+
+    .btn-page-section-count {
+      .btn-page-control-btn-active {
+        background-color: variables.$blue;
+        color: variables.$white;
+        border-radius: 50%;
+      }
+      .btn-page-control-btn {
+        padding: 1rem 1.5rem;
+        margin-right: 1rem;
+        cursor: pointer;
+      }
+    }
+  }
+}

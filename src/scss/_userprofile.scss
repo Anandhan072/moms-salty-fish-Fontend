@@ -1,0 +1,139 @@
+@use "variables";
+@use "mixin";
+
+#user-info-main {
+  display: block;
+  width: 100vw;
+  margin: auto;
+
+  .info-main {
+    margin-top: 5rem !important;
+    margin: auto;
+    width: 75vw;
+    color: variables.$offer_font_color;
+
+    .user-main {
+      background-color: variables.$offer_font_color;
+      color: variables.$white;
+      padding: 5px 1rem;
+      text-align: center;
+      border-radius: 8px;
+    }
+    .user-info-cont {
+      margin-left: 2rem;
+      margin-top: 2rem;
+      .user-info-data {
+        .user-main-info {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+          .user-input-section {
+            display: flex;
+            gap: 2rem;
+            input {
+              width: 30rem;
+              border: 1px solid variables.$offer_font_color;
+              padding: 5px 1rem;
+              font-size: 1.5rem;
+
+              color: variables.$offer_font_color;
+              ::placeholder {
+                padding-left: 1rem;
+              }
+            }
+          }
+          .user-info-edit {
+            position: absolute;
+            background-color: transparent;
+            border: none;
+            right: 1px;
+            svg {
+              fill: variables.$offer_font_color;
+              transform: scale(1.2);
+            }
+          }
+          .user-info-btn-section {
+            display: none;
+            .user-info-btn {
+              padding: 5px 1rem;
+              border: none;
+              border-radius: 5px;
+              width: fit-content;
+              background-color: rgb(variables.$offer_font_color, 0.7);
+              color: rgb(variables.$white, 1);
+
+              &:hover {
+                background-color: rgb(variables.$offer_font_color, 1);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.user-details-no-data {
+  text-align: center;
+}
+.address-main {
+  margin: 3rem;
+
+  .user-address-cont {
+    position: relative;
+    .address-section {
+      position: relative;
+      margin-top: 2rem;
+      margin-left: 2rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: nowrap;
+      .address-warning {
+        text-align: center;
+        width: 100%;
+      }
+      .user-address-info {
+        flex-direction: row;
+        position: relative;
+        width: 30rem;
+        background-color: rgb(variables.$offer_font_color, 0.1);
+        padding: 1rem 3rem;
+        border-radius: 5px;
+        .user-address-modify-btn {
+          position: absolute;
+          right: 10px;
+          padding: 5px 1rem;
+          font-size: 1rem;
+          border: none;
+          background-color: rgb(variables.$offer_font_color, 1);
+          color: variables.$white;
+          display: none;
+          border-radius: 5px;
+        }
+        &:hover .user-address-modify-btn {
+          display: block;
+        }
+        .user-address-container {
+          font-size: 1.3rem;
+        }
+      }
+    }
+    .user-address-new-add {
+      position: absolute;
+      font-size: 1rem;
+      right: 5px;
+      top: 1px;
+
+      padding: 5px 1rem;
+      border: none;
+      background-color: rgb(variables.$offer_font_color, 0.7);
+      color: variables.$white;
+      border-radius: 5px;
+
+      &:hover {
+        background-color: rgb(variables.$offer_font_color, 1);
+      }
+    }
+  }
+}

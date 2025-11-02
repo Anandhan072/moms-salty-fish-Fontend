@@ -1,0 +1,155 @@
+@use "variables";
+@use "mixin";
+
+#main-login {
+  display: block;
+  position: relative;
+
+  #login {
+    width: 100vw;
+    height: 7rem;
+    background-color: variables.$filter_font_color;
+    .login-logo {
+      width: 15rem;
+    }
+  }
+
+  #login-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10rem;
+    .login-page-container {
+      position: relative;
+      width: 40rem;
+      height: 50rem;
+      background-color: rgb(variables.$filter_font_color, 0.2);
+      .login-page-main {
+        padding: 1rem;
+        border-bottom: 1px solid rgb(variables.$white, 1);
+        display: flex;
+        align-items: center;
+        .login-page-main-img {
+          img {
+            width: 15rem;
+          }
+        }
+
+        .login-page-moms-text {
+          position: relative;
+          top: 10px;
+          font-family: variables.$logo_font;
+          color: variables.$logo_color;
+          .login-page-moms-text-head {
+            letter-spacing: 1px;
+            font-size: 3rem;
+          }
+          .login-page-moms-text-paragrap {
+            position: relative;
+            font-size: 1.9rem;
+            top: -17px;
+            left: -1px;
+          }
+        }
+      }
+      .login-page-input {
+        font-family: variables.$about_moms_font;
+        padding: 4rem;
+        .login-page-input-text {
+          font-size: 2.5rem;
+          opacity: 0.8;
+        }
+
+        .login-page-input-form-cont {
+          position: relative;
+          margin-top: 2rem;
+          display: flex;
+          align-items: center;
+          flex-direction: column;
+          gap: 1rem;
+          input {
+            width: 100%;
+            font-size: 2rem;
+            padding: 1rem 1rem;
+            border: 1px solid rgb(variables.$black, 0.2);
+            &::placeholder {
+              font-size: 1.3rem;
+            }
+          }
+          #email_id {
+            font-size: 1.3rem;
+          }
+
+          .submit-el {
+            background: rgb(variables.$filter_font_color, 1);
+            color: variables.$white;
+          }
+        }
+      }
+      .login-terms-policy {
+        position: absolute;
+        bottom: 10px;
+        font-size: 1.3rem;
+        text-align: center;
+        width: 100%;
+        a {
+          color: variables.$filter_font_color;
+        }
+      }
+    }
+  }
+}
+
+.otp-verification {
+  padding: 4rem;
+  color: variables.$offer_font_color;
+  .otp-verification-main {
+    .otp-verification-text {
+      font-size: 1.3rem;
+    }
+    .otp-verification-change-email {
+      margin-top: 1rem;
+      font-family: variables.$font-otp-change;
+    }
+    .otp-verification-input-section {
+      margin-top: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      .otp-verification-input {
+        width: 4rem;
+        height: 5rem;
+        font-size: 2.4rem;
+        text-align: center;
+        border: 2px solid rgb(variables.$offer_font_color, 0.2);
+        border-radius: 8px;
+        margin: 0 5px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        color: variables.$offer_font_color;
+        &:focus {
+          border-color: rgb(variables.$offer_font_color, 1);
+          box-shadow: 0 0 5px (variables.$offer_font_color, 1);
+          outline: none;
+        }
+      }
+    }
+    .otp-verification-resend-otp {
+      margin-top: 1rem;
+      font-family: variables.$font-otp-change;
+    }
+
+    .otp-verification-otp-verify {
+      margin-top: 4rem;
+      button {
+        width: 100%;
+        padding: 1rem 2rem;
+        font-family: variables.$font-otp-change;
+        color: variables.$white;
+        font-size: 2rem;
+        border: none;
+        background-color: variables.$offer_font_color;
+      }
+    }
+  }
+}
