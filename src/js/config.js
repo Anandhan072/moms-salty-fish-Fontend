@@ -18,7 +18,7 @@
 export const TIME_OUT = 20;
 export const PAGE_Count = 6;
 export const MAX_PRICE = 3000;
-export const Origin_Url = "http://localhost:5173/";
+export const Origin_Url = "https://momssaltyfish.com/";
 export const Serret_Code = "Mom'sSaltyFish@1290";
 
 export const Backend_Url = `http://16.112.76.197:3000/`;
