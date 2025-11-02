@@ -21,7 +21,7 @@ export const MAX_PRICE = 3000;
 export const Origin_Url = "https://momssaltyfish.com/";
 export const Serret_Code = "Mom'sSaltyFish@1290";
 
-export const Backend_Url = `http://16.112.76.197:3000/`;
+export const Backend_Url = `https://api.momssaltyfish.com/`;
 
 export const API_OFFER = `${Backend_Url}api/v1/offer/`;
 export const API_ITEMS = `${Backend_Url}api/v1/items/`;
