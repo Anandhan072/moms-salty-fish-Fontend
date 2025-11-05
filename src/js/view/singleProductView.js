@@ -9,19 +9,20 @@ class SingleProductView extends view {
 
   _prepperPage() {
     if (!this._subData) return;
-    let data = this._subData;
+    let { productInfo, apiUrl, callFn } = this._subData;
 
-    this._setMainImage(data);
-    this._renderSmallImages(data);
-    this._renderText(".items-content-main-header h1", data.name);
-    this._renderPrice(data.variants?.[0]);
-    this._renderVariantButtons(data.variants);
-    this._renderDescription(data.description);
-    this._renderReviewSummary(data.userReviews);
-    this._renderReviewGraph(data.userReviews);
-    this._renderUserComments(data.userReviews);
-    this._renderAllUserReview(data.userReviews);
-    this._handelClick();
+    this._setMainImage(productInfo);
+    this._renderSmallImages(productInfo);
+    this._renderText(".items-content-main-header h1", productInfo.name);
+    this._renderPrice(productInfo.variants?.[0]);
+    this._renderVariantButtons(productInfo.variants);
+    this._renderDescription(productInfo.description);
+    this._renderReviewSummary(productInfo.userReviews);
+    this._renderReviewGraph(productInfo.userReviews);
+    this._renderUserComments(productInfo.userReviews);
+    this._renderAllUserReview(productInfo.userReviews);
+    this._handelClickWeightQuantity();
+    this._handelClickAddCart(productInfo.id, productInfo.variants, apiUrl, callFn);
   }
 
   _setMainImage({ photos, sortName }) {
@@ -237,7 +238,7 @@ class SingleProductView extends view {
       });
   }
 
-  _handelClick() {
+  _handelClickWeightQuantity() {
     const fullImage = document.querySelector(".items-main-image-big img");
     const thumbs = document.querySelectorAll(".items-main-image-small-li img");
     const reviewBtn = document.querySelector(".items-reviews-users-btn");
@@ -332,6 +333,52 @@ class SingleProductView extends view {
           // this._updateQueryParam("quantity", value);
         }
       });
+    });
+  }
+
+  _handelClickAddCart(id, variants, apiUrl, callFn) {
+    console.log(variants);
+
+    const addCartBtn = document.querySelector(".items-content-main-btn-addcart");
+
+    addCartBtn.addEventListener("click", async (el) => {
+      console.log("jhgfuchgchchc");
+      const getWeight = this._getQueryParam("weight");
+      const getQuantity = this._getQueryParam("quantity");
+
+      // Find the variant that matches the selected weight
+      const selectedVariant = variants.find((variant) => variant.weight.value == getWeight);
+
+      if (!selectedVariant) {
+        console.warn("No variant found for weight:", getWeight);
+        return;
+      }
+
+      const cartItem = {
+        itemId: id,
+        variantId: selectedVariant.id,
+        quantity: getQuantity || 1, // default to 1 if quantity is missing
+      };
+
+      console.log("Cart Item:", cartItem);
+
+      // Simulate adding to cart (you can replace with your real API or logic)
+
+      try {
+        const res = await callFn({ url: `${apiUrl}updateCart`, body: cartItem });
+        console.log(res);
+      } catch (error) {
+        console.log(error);
+      }
+      addCartBtn.textContent = "Adding...";
+      addCartBtn.disabled = true;
+
+      // Example async call or local storage add
+      setTimeout(() => {
+        console.log("Item added to cart successfully:", cartItem);
+        addCartBtn.textContent = "Added to Cart";
+        addCartBtn.disabled = false;
+      }, 1000);
     });
   }
 }

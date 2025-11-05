@@ -1,55 +1,19 @@
-// =====================================================
-// 🔐 USER SESSION & TOKEN MANAGEMENT — Enterprise Grade
-// =====================================================
-
 import { API_AUTH } from "./config";
 import { apiRequest } from "./helper";
 import { user_Profile } from "./controller";
 
-// =====================================================
-// 🧱 Storage Key Constants
-// =====================================================
 const STORAGE_KEYS = {
   access: "access_token",
   refresh: "refresh_token",
-  device: "deviceId",
+  device: "device_id",
   user: "user_info",
 };
 
-// =====================================================
-// 🧩 Global User State
-// =====================================================
-export const userInfo = {
-  userDetails: {},
-};
+const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000; // 2 min
+export const userInfo = { userDetails: {} };
 
-// =====================================================
-// 🧰 Utility Helpers
-// =====================================================
 const now = () => Date.now();
-const FIVE_MIN = 5 * 60 * 1000;
 
-// 🧹 Clear only related keys
-export const clearSession = (reason = "") => {
-  console.warn(`⚠️ Clearing session: ${reason}`);
-  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
-  window.dispatchEvent(new Event("sessionCleared"));
-};
-
-// Dynamic header builder
-export const getAuthHeaders = (token, deviceId) => ({
-  "Content-Type": "application/json",
-  authorization: `Bearer ${token}`,
-  "device-id": deviceId,
-});
-
-export const logoutFn = () => {
-  clearSession("user Log out");
-  window.location.reload();
-};
-// =====================================================
-// 📱 Device ID Management
-// =====================================================
 export const getDeviceId = () => {
   let deviceId = localStorage.getItem(STORAGE_KEYS.device);
   if (!deviceId) {
@@ -59,32 +23,24 @@ export const getDeviceId = () => {
   return deviceId;
 };
 
-// =====================================================
-// 🔄 API Helpers
-// =====================================================
-export const getUserAPI = async (url, options) => {
-  try {
-    const response = await apiRequest(url, options);
-    userInfo.userDetails = response || {};
-    return response;
-  } catch (err) {
-    console.error("❌ Error fetching user API:", err);
-    throw err;
-  }
+export const clearSession = (reason = "") => {
+  console.warn(`⚠️ Session cleared: ${reason}`);
+  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  userInfo.userDetails = {};
+  window.dispatchEvent(new Event("sessionCleared"));
 };
 
-export const getRenewAccessToken = async (url, options) => {
-  try {
-    return await apiRequest(url, options);
-  } catch (err) {
-    console.error("❌ Error renewing access token:", err);
-    throw err;
-  }
+export const logoutFn = () => {
+  clearSession("User logged out");
+  window.location.href = "/signup";
 };
 
-// =====================================================
-// 🧭 Core: Check & Manage User Session
-// =====================================================
+const getAuthHeaders = (token, deviceId) => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+  "Device-ID": deviceId,
+});
+
 export const checkUserIsActive = async () => {
   try {
     const refreshRaw = localStorage.getItem(STORAGE_KEYS.refresh);
@@ -93,7 +49,7 @@ export const checkUserIsActive = async () => {
     const deviceId = getDeviceId();
 
     if (!refreshRaw || !deviceId) {
-      clearSession("Missing refresh token or device ID");
+      clearSession("Missing tokens");
       return false;
     }
 
@@ -104,76 +60,105 @@ export const checkUserIsActive = async () => {
 
     const timeNow = now();
 
-    // 🧨 Check refresh token
+    // ❌ Refresh token expired
     if (!refreshData.refreshToken || refreshData.expireAt <= timeNow) {
-      clearSession("Refresh token expired");
+      clearSession("Session expired");
       return false;
     }
 
-    // 🕐 Refresh access token if about to expire
-    if (!accessData?.accessToken || accessData.expireAt - FIVE_MIN <= timeNow) {
-      const options = {
+    // 🕓 Refresh access token if expiring soon
+    if (!accessData?.accessToken || accessData.expireAt - TOKEN_REFRESH_BUFFER_MS <= timeNow) {
+      const res = await apiRequest(`${API_AUTH}refresh-token`, {
         method: "POST",
         headers: getAuthHeaders(refreshData.refreshToken, deviceId),
-      };
-
-      const refreshed = await getRenewAccessToken(`${API_AUTH}refresh-token`, options);
-      if (!refreshed?.accessToken) throw new Error("No access token received");
+      });
+      if (!res?.accessToken) throw new Error("Access token refresh failed");
 
       const newAccessData = {
-        accessToken: refreshed.accessToken,
-        expireAt: now() + refreshed.expiresIn * 1000,
+        accessToken: res.accessToken,
+        expireAt: now() + res.expiresIn * 1000,
       };
 
       localStorage.setItem(STORAGE_KEYS.access, JSON.stringify(newAccessData));
-      console.info("✅ Access token refreshed successfully");
       window.dispatchEvent(new Event("tokenRefreshed"));
-
-      return "REFRESHED";
+      console.info("✅ Access token refreshed");
     }
 
     return true;
   } catch (err) {
-    console.error("❌ Error in checkUserIsActive:", err);
-    clearSession("Session check failed");
+    console.error("❌ checkUserIsActive error:", err);
+    clearSession("Session invalid");
     return false;
   }
 };
 
-// =====================================================
-// 🌐 Auto-run on page load & URL changes (with debounce)
-// =====================================================
-export const initSessionWatcher = () => {
-  let debounceTimer;
+// 🛒 Cart Handler
+export const updateCartItem = async (payload, retry = false) => {
+  try {
+    const active = await checkUserIsActive();
+    if (!active) throw new Error("Session invalid");
 
+    const access = JSON.parse(localStorage.getItem(STORAGE_KEYS.access) || "{}");
+    const deviceId = getDeviceId();
+
+    const res = await apiRequest(payload.url, {
+      method: "POST",
+      headers: getAuthHeaders(access.accessToken, deviceId),
+      body: payload.body || {},
+    });
+
+    const currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || "{}");
+    currentUser.userProductInfo = {
+      ...currentUser.userProductInfo,
+      cart: res?.data?.cart || [],
+    };
+
+    userInfo.userDetails = currentUser;
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(currentUser));
+
+    return res;
+  } catch (err) {
+    console.error("❌ updateCartItem failed:", err);
+
+    if (!retry && (err.status === 401 || err.message?.includes("401"))) {
+      const refreshed = await checkUserIsActive();
+      if (refreshed === "REFRESHED") return updateCartItem(payload, true);
+    }
+
+    clearSession("Cart update failed");
+    throw err;
+  }
+};
+
+export const getUserAPI = async (url, options) => {
+  try {
+    const response = await apiRequest(url, options);
+    userInfo.userDetails = response || {};
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(response));
+    return response;
+  } catch (err) {
+    console.error("❌ getUserAPI error:", err);
+    throw err;
+  }
+};
+
+// 🧭 Session Watcher
+export const initSessionWatcher = () => {
   const runCheck = async () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      try {
-        const status = await checkUserIsActive();
-        console.log("Session status:", status);
-        if (status) user_Profile();
-      } catch (err) {
-        console.error("Session watcher error:", err);
-      }
-    }, 500);
+    const status = await checkUserIsActive();
+    console.log("🧭 Session status:", status);
+    if (status) user_Profile();
   };
 
-  // Run once on load
-  window.addEventListener("load", runCheck);
+  ["load", "popstate", "pushstate"].forEach((evt) => window.addEventListener(evt, runCheck));
 
-  // Browser navigation
-  window.addEventListener("popstate", runCheck);
-
-  // SPA navigation
   const originalPushState = window.history.pushState;
   window.history.pushState = function (...args) {
     originalPushState.apply(this, args);
     window.dispatchEvent(new Event("pushstate"));
   };
-  window.addEventListener("pushstate", runCheck);
 
-  console.log("🧭 Session watcher initialized.");
+  console.log("✅ Session watcher initialized");
 };
 
 initSessionWatcher();

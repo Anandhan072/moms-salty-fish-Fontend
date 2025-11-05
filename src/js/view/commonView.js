@@ -10,7 +10,6 @@ class CommonView extends view {
     if (!this._subData) return;
     this._offerContainer(this._subData.offerData);
     this._headerNavContainer(this._subData.navData);
-    this._handelInterSectionObserverEvent();
   }
 
   _offerContainer(data) {
@@ -97,10 +96,14 @@ class CommonView extends view {
 
   _handelInterSectionObserverEvent() {
     const navContainer = document.querySelector("#header-group-main");
-    const product = document.querySelector("#product-sample-main");
+    let product;
 
+    function productFun() {
+      return document.querySelector("#product-sample-main");
+    }
     window.addEventListener("scroll", () => {
       const scrollEl = window.pageYOffset;
+      product = productFun();
       const productRect = product.getBoundingClientRect();
 
       // Step 1: Original position

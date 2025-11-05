@@ -11,7 +11,7 @@ import {
 } from "./controller.js";
 
 import { getNavAPIByID } from "./productModule.js";
-import { initSessionWatcher } from "./userModule.js";
+import { checkUserIsActive } from "./userModule.js";
 import { API_Category } from "./config.js";
 
 // 🧭 Define routes
@@ -31,57 +31,54 @@ const routes = {
 
 let routerInitialized = false;
 
-// 🧩 Main router logic
 export const router = async () => {
   try {
-    // handel home page
     const parts = window.location.pathname.split("/").filter(Boolean);
     let path = parts[0] || "home";
 
-    // Only run firstRun for main pages
-    const skipFirstRunPages = ["signup", "auth", "otpVerification"];
-    if (!skipFirstRunPages.includes(path)) {
-      await routes.firstRun();
-    }
+    // Skip firstRun for these pages
+    const skipFirstRun = ["signup", "auth", "otpVerification"];
+    if (!skipFirstRun.includes(path)) await routes.firstRun();
 
-    // Handle /product/:slug
-    if (path === "product") {
-      const categorySlug = parts[1];
-      if (categorySlug) {
-        const productData = await getNavAPIByID(`${API_Category}?url=${categorySlug}`);
-        if (productData) {
-          path =
-            productData.url ||
-            productData?.data?.url ||
-            productData?.category?.url ||
-            productData?.[0]?.url ||
-            "product";
-          if (typeof path === "string") path = path.replace(/-/g, "");
-        }
+    // 🧩 Handle /product/:slug
+    if (path === "product" && parts[1]) {
+      const productData = await getNavAPIByID(`${API_Category}?url=${parts[1]}`);
+      if (productData) {
+        path = productData?.url?.replace(/-/g, "") || "product";
       }
     }
 
-    // Handle /item/:id
+    // 🧩 Handle /item/:id
     else if (parts.includes("item")) {
       path = "item";
     }
 
-    // Handle /user
-    else if (path === "user") {
-      path = userInfo?.userActive ? "userProfile" : "signup";
-    }
-
-    // Handle /auth/otp-verification
+    // 🧩 Handle /auth/otp-verification
     else if (path === "auth" && parts[1] === "otp-verification") {
       path = "otpVerification";
     }
 
-    // Handle /policy
+    // 🧩 Handle /policy
     else if (path === "policy") {
       path = parts.length >= 2 ? "privacyPolicy" : "";
     }
 
-    // ✅ Resolve route
+    // ✅ Check user login state
+    const isLoggedIn = await checkUserIsActive();
+
+    // 🚫 If logged-in → block auth pages
+    if (isLoggedIn && ["signup", "otpVerification"].includes(path)) {
+      console.info("🔒 Logged-in user redirected to home");
+      return navigateTo("/home");
+    }
+
+    // 🔒 Protected routes (must be logged in)
+    const protectedRoutes = ["cart", "userProfile", "fav"];
+    if (!isLoggedIn && protectedRoutes.includes(path)) {
+      console.warn("⚠️ User not logged in, redirecting to signup");
+      return navigateTo("/signup");
+    }
+
     const page = routes[path] || routes.home;
     await page();
   } catch (err) {
@@ -89,18 +86,15 @@ export const router = async () => {
   }
 };
 
-// 🚀 Initialize SPA router
+// 🚀 Initialize router
 export const initRouter = () => {
   if (routerInitialized) return;
   routerInitialized = true;
 
-  // Run router once on initial load
   router();
 
-  // Handle back/forward browser navigation
   window.addEventListener("popstate", router);
 
-  // 🧠 Intercept all internal <a> clicks to prevent reload
   document.addEventListener("click", (e) => {
     const link = e.target.closest("a");
     if (!link) return;
@@ -112,8 +106,8 @@ export const initRouter = () => {
   });
 };
 
-// 🧭 SPA Navigation Helper (no reload)
+// 🧭 SPA Navigation helper
 export const navigateTo = (url) => {
   window.history.pushState({}, "", url);
-  router(); // trigger re-render manually
+  router();
 };

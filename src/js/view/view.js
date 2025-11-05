@@ -1,6 +1,7 @@
 import icons from "../../img/icon.svg";
 import { PAGE_Count } from "../config";
 import { Origin_Url } from "../config";
+import { renderHTML } from "../utils/dom";
 export default class view {
   _originUrl = Origin_Url;
   _data;
@@ -13,18 +14,18 @@ export default class view {
   render(data, parentEl, subData, element = "afterbegin", clear = true) {
     this._data = data;
     this._subData = subData;
-
     this._parentElement = document.querySelector(`${parentEl}`);
-
     const markup = this._generateMarkup();
-
     if (clear) this._clear();
     this._parentElement.insertAdjacentHTML(element, markup);
-
     // Call _prepperPage if it exists
     if (typeof this._prepperPage === "function") {
       this._prepperPage();
     }
+  }
+
+  renderError(message = "Something went wrong.") {
+    renderHTML(this._parentEl, `<div class="error"><p>${message}</p></div>`);
   }
 
   _clear() {

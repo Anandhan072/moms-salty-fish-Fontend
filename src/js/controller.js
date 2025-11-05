@@ -11,6 +11,7 @@ import signupView from "./view/signupView";
 import otpVerificationView from "./view/otpVerificationView";
 import userProfileView from "./view/userProfileView";
 import policiesView from "./view/policiesView";
+import cartView from "./view/cartView";
 
 /**
  * User-Profile Page (banner + default items)
@@ -44,6 +45,8 @@ export const commonViewControllerHome = async () => {
     await user_Profile();
     // Fetch items and cache internally for reuse
     await ProductModule.getItems(config.API_ITEMS);
+
+    commonView._handelInterSectionObserverEvent();
   } catch (err) {
     console.error("[Common Controller] Failed to initialize:", err);
   }
@@ -132,7 +135,13 @@ export const singleProduct = async () => {
     const htmlEl = await ProductModule.getHtml(`${config.API_HTML}?page=items`);
     const url = ProductModule.getUrl();
     const items = ProductModule.findItemSlug(url[url.length - 1]);
-    await singleProductView.render(htmlEl, "#main", items);
+
+    const data = {
+      productInfo: items,
+      apiUrl: config.API_USER,
+      callFn: userProfile.updateCartItem,
+    };
+    await singleProductView.render(htmlEl, "#main", data);
   } catch (err) {
     console.error("[Product Page] Error:", err);
   }
@@ -203,4 +212,9 @@ export const policesController = async () => {
   } catch (err) {
     console.error("[Product Page] Error:", err);
   }
+};
+
+export const cartController = async () => {
+  try {
+  } catch (error) {}
 };
