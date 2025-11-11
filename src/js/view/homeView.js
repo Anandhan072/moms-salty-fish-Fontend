@@ -1,3 +1,4 @@
+import { ProductCard } from "../components/components.js";
 import icons from "../../img/icon.svg";
 import view from "./view";
 
@@ -160,7 +161,7 @@ class HomeView extends view {
     const markup = value
       .filter((val) => val.category == id) // keep only matching category
       .map((acc) => {
-        return this._itemCart(acc);
+        return ProductCard(acc);
       })
       .join("");
 

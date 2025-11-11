@@ -1,5 +1,7 @@
 import { TIME_OUT } from "./config";
 
+import APIClient from "./utils/apiClient";
+
 /**
  * Creates a timeout promise that rejects after N seconds.
  */
