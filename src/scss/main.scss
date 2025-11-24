@@ -7,6 +7,8 @@
 @use "login";
 @use "polices";
 @use "userprofile";
+@use "cart";
+@use "error";
 
 * {
   padding: 0; // Removed percentage to avoid confusion, just use 0

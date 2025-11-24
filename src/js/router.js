@@ -1,4 +1,5 @@
-// router.js
+// router.js — Production-Ready Version (Enhanced)
+
 import {
   commonViewControllerHome,
   homePage,
@@ -8,15 +9,18 @@ import {
   otpVerification,
   UserProfileController,
   policesController,
+  cartController
 } from "./controller.js";
 
 import { getNavAPIByID } from "./productModule.js";
 import { checkUserIsActive } from "./userModule.js";
 import { API_Category } from "./config.js";
+import { errorMessage } from "./utils/error.js";
 
-// 🧭 Define routes
+/* ----------------------------------------------------
+   ROUTE TABLE — All pages registered here
+----------------------------------------------------- */
 const routes = {
-  "": homePage,
   home: homePage,
   product: allProduct,
   fish: allProduct,
@@ -24,81 +28,136 @@ const routes = {
   item: singleProduct,
   signup: signupPage,
   otpVerification: otpVerification,
-  polices: policesController,
   userProfile: UserProfileController,
-  firstRun: async () => await commonViewControllerHome(),
+  polices: policesController,
+  cart: cartController,
+
+  /* 404 Page */
+  error: async () => {
+    await errorMessage();
+  },
+
+  /* Common layout UI (nav, footer, global UI)... */
+  firstRun: async () => {
+    await commonViewControllerHome();
+  }
 };
 
+/* ----------------------------------------------------
+   Router State
+----------------------------------------------------- */
 let routerInitialized = false;
+let lastURL = window.location.pathname;
 
+/* ----------------------------------------------------
+   MAIN ROUTER FUNCTION
+----------------------------------------------------- */
 export const router = async () => {
   try {
     const parts = window.location.pathname.split("/").filter(Boolean);
     let path = parts[0] || "home";
 
-    // Skip firstRun for these pages
-    const skipFirstRun = ["signup", "auth", "otpVerification"];
-    if (!skipFirstRun.includes(path)) await routes.firstRun();
+    /* -----------------------------------------------
+       1️⃣ Run Common Layout
+       ----------------------------------------------- */
+    const skipFirstRun = ["signup", "otpVerification", "auth"];
+    if (!skipFirstRun.includes(path)) {
+      await routes.firstRun();
+    }
 
-    // 🧩 Handle /product/:slug
+    /* -----------------------------------------------
+       2️⃣ Dynamic Route Handling 
+       ----------------------------------------------- */
+
+    // /product/:slug
     if (path === "product" && parts[1]) {
-      const productData = await getNavAPIByID(`${API_Category}?url=${parts[1]}`);
-      if (productData) {
-        path = productData?.url?.replace(/-/g, "") || "product";
+      const categorySlug = parts[1];
+      const productData = await getNavAPIByID(`${API_Category}?url=${categorySlug}`);
+
+      if (productData?.url) {
+        path = productData.url.replace(/-/g, "");
       }
     }
 
-    // 🧩 Handle /item/:id
-    else if (parts.includes("item")) {
+    // /item/:id
+    if (parts.includes("item")) {
       path = "item";
     }
 
-    // 🧩 Handle /auth/otp-verification
-    else if (path === "auth" && parts[1] === "otp-verification") {
+    // /auth/otp-verification
+    if (path === "auth" && parts[1] === "otp-verification") {
       path = "otpVerification";
     }
 
-    // 🧩 Handle /policy
-    else if (path === "policy") {
-      path = parts.length >= 2 ? "privacyPolicy" : "";
+    // /policy
+    if (path === "policy") {
+      path = "polices"; // <— mapped to controller
     }
 
-    // ✅ Check user login state
+    // /cart
+    if (path === "cart") {
+      path = "cart";
+    }
+
+    /* -----------------------------------------------
+       3️⃣ Auth Handling
+       ----------------------------------------------- */
     const isLoggedIn = await checkUserIsActive();
 
-    // 🚫 If logged-in → block auth pages
+    // Logged in → block signup pages
     if (isLoggedIn && ["signup", "otpVerification"].includes(path)) {
-      console.info("🔒 Logged-in user redirected to home");
       return navigateTo("/home");
     }
 
-    // 🔒 Protected routes (must be logged in)
+    // Not logged in → block protected routes
     const protectedRoutes = ["cart", "userProfile", "fav"];
     if (!isLoggedIn && protectedRoutes.includes(path)) {
-      console.warn("⚠️ User not logged in, redirecting to signup");
       return navigateTo("/signup");
     }
 
-    const page = routes[path] || routes.home;
+    /* -----------------------------------------------
+       4️⃣ Execute Page Controller
+       ----------------------------------------------- */
+    const page = routes[path];
+
+    if (!page) {
+      console.warn("⚠ Invalid Route:", path);
+      await routes.firstRun();
+      return await routes.error();
+    }
+
     await page();
   } catch (err) {
-    console.error("❌ Router error:", err);
+    console.error("❌ Router Error:", err);
+    await routes.firstRun();
+    await routes.error();
   }
 };
 
-// 🚀 Initialize router
+/* ----------------------------------------------------
+   Router Initialization
+----------------------------------------------------- */
 export const initRouter = () => {
-  if (routerInitialized) return;
+  if (routerInitialized) return; // Prevent double init
   routerInitialized = true;
 
   router();
 
-  window.addEventListener("popstate", router);
+  // SPA back/forward
+  window.addEventListener("popstate", () => {
+    if (lastURL !== window.location.pathname) {
+      lastURL = window.location.pathname;
+      router();
+    }
+  });
 
+  // Intercept internal <a> clicks
   document.addEventListener("click", (e) => {
     const link = e.target.closest("a");
     if (!link) return;
+
     const href = link.getAttribute("href");
+
     if (!href || href.startsWith("http") || href.startsWith("#")) return;
 
     e.preventDefault();
@@ -106,8 +165,12 @@ export const initRouter = () => {
   });
 };
 
-// 🧭 SPA Navigation helper
+/* ----------------------------------------------------
+   SPA Navigation Helper
+----------------------------------------------------- */
 export const navigateTo = (url) => {
+  if (url === lastURL) return;
+  lastURL = url;
   window.history.pushState({}, "", url);
   router();
 };

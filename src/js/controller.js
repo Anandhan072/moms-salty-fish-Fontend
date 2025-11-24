@@ -1,3 +1,4 @@
+import { defautlErrorEl } from "./utils/dom";
 import * as ProductModule from "./productModule";
 import * as userProfile from "./userModule";
 import * as config from "./config";
@@ -12,6 +13,7 @@ import otpVerificationView from "./view/otpVerificationView";
 import userProfileView from "./view/userProfileView";
 import policiesView from "./view/policiesView";
 import cartView from "./view/cartView";
+import productItemView from "./view/productItemView";
 
 /**
  * User-Profile Page (banner + default items)
@@ -19,7 +21,7 @@ import cartView from "./view/cartView";
 
 export const user_Profile = async () => {
   const htmlEl = await ProductModule.getHtml(`${config.API_HTML}?page=user-option`);
-  console.log(userProfile.userInfo);
+ 
   const data = {
     userDate: userProfile.userInfo.userDetails,
     urlChange: ProductModule.setRedirectUrl,
@@ -31,9 +33,10 @@ export const user_Profile = async () => {
   await ProductModule.getItems(config.API_ITEMS);
 };
 
+
 export const commonViewControllerHome = async () => {
   try {
-    console.log(config.API_Category, config.API_OFFER);
+   
     const [offerData, navData] = await Promise.all([
       ProductModule.getOffers(config.API_OFFER),
       ProductModule.getCategory(config.API_Category),
@@ -136,16 +139,25 @@ export const singleProduct = async () => {
     const url = ProductModule.getUrl();
     const items = ProductModule.findItemSlug(url[url.length - 1]);
 
+    const cartFind = userProfile.userInfo?.userDetails?.userProductInfo?.cart?.filter(
+      (cartItem) => cartItem.itemId === items._id 
+    );
+
+
+
     const data = {
       productInfo: items,
       apiUrl: config.API_USER,
       callFn: userProfile.updateCartItem,
+      cartAdded: cartFind   // convert to true/false
     };
+
     await singleProductView.render(htmlEl, "#main", data);
   } catch (err) {
     console.error("[Product Page] Error:", err);
   }
 };
+
 
 /**
  * Single Product
@@ -214,7 +226,32 @@ export const policesController = async () => {
   }
 };
 
+// Cart View
 export const cartController = async () => {
   try {
+
+    let htmlEl = await ProductModule.getHtml(`${config.API_HTML}?page=cart`);
+
+    const getCart =  userProfile.userInfo.userDetails.userProductInfo.cart;
+
+
+    const cartOnly = getCart.map(cart => {
+      const variants = ProductModule.findItemByIDVariants(cart.itemId, cart.variantId, cart) 
+      return variants;
+    })
+
+    if(cartOnly.length === 0)  htmlEl = defautlErrorEl
+    
+
+    const data = {
+      variants: cartOnly,
+      checkError: cartOnly.length === 0 ? false : true
+    };
+
+
+
+    console.log(data)
+
+    cartView.render(htmlEl, "#main", data);
   } catch (error) {}
 };

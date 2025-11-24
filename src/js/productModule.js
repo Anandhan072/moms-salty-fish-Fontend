@@ -32,7 +32,7 @@ const LS_KEY = "ProductCache";
       ProductData.nav = saved.nav || [];
       ProductData.banner = saved.banner || [];
       ProductData.lastFetched = saved.lastFetched || {};
-      console.log("📦 Loaded cached data from localStorage");
+  
     }
   } catch (err) {
     console.warn("⚠️ Failed to load local cache:", err);
@@ -66,7 +66,7 @@ async function fetchData(type, endpoint, { force = false } = {}) {
 
   // ✅ Use cached data if not stale and not forced
   if (cachedData?.length && !isStale && !force) {
-    console.log(`🟢 Using cached ${type} data`);
+
     return cachedData;
   }
 
@@ -83,7 +83,7 @@ async function fetchData(type, endpoint, { force = false } = {}) {
     // 🧠 Persist only persistent data (not HTML)
     if (type !== "html") saveToLocalStorage();
 
-    console.log(`✅ ${type} data fetched successfully`);
+
     return ProductData[type];
   } catch (err) {
     ProductData.loading = false;
@@ -162,9 +162,8 @@ export const filterAndSortItems = function (items = ProductData.nav, options = {
   let check;
   // ✅ Category filter
   if (category) {
-    console.log("opticon:", options);
-    console.log(ProductData.nav);
-    console.log(result);
+
+
     check = ProductData.nav.find((acc) => acc.url === category);
 
     result = result.filter((item) => {
@@ -198,7 +197,7 @@ export const filterAndSortItems = function (items = ProductData.nav, options = {
   // ✅ SortBy Price
 
   if (sortBy) {
-    console.log("sortBy:", sortBy);
+
     if (sortBy === "asc") {
       result = result.sort((a, b) => a.variants[0].price - b.variants[0].price);
     }
@@ -206,15 +205,15 @@ export const filterAndSortItems = function (items = ProductData.nav, options = {
       result = result.sort((a, b) => b.variants[0].price - a.variants[0].price);
     }
     if (sortBy === "AtoZ") {
-      console.log("AtoZ");
+
       result = result.sort((a, b) => a.name.localeCompare(b.name));
     }
     if (sortBy === "ZtoA") {
-      console.log("AtoZ");
+
       result = result.sort((a, b) => b.name.localeCompare(a.name));
     }
 
-    console.log("sortBy:", result);
+
   }
 
   // ✅ Sorting
@@ -247,3 +246,18 @@ export const findItemSlug = function (slug) {
   const result = ProductData.items.find((acc) => acc.slug === slug);
   return result;
 };
+
+
+export const findItemByID = function (id) {
+  const result = ProductData.items.find((acc) => acc._id === id);
+  return result;
+}
+
+
+export const findItemByIDVariants = function(pro_id, vari_id, cart) {
+  const findProduct = findItemByID(pro_id)
+const resutl = findProduct.variants.find(acc => acc._id == vari_id)
+const find_pro_vari = {product: findProduct, variant:resutl, cartItem: cart}
+
+return find_pro_vari;
+}

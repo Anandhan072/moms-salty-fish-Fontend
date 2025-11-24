@@ -31,6 +31,8 @@ class SignupView extends view {
 
       const val = await fn(`${url}request-otp`, options);
 
+      console.log("OTP Request Response:", val);
+
       const getRedirectUrl = this._getQueryParam("redirectUrl");
       console.log("redirectUrl:", getRedirectUrl);
 

@@ -94,13 +94,16 @@ class OtpVerification extends view {
           headers: { "Content-Type": "application/json" },
         });
 
+        console.log("OTP Verification Response:", response);
+
         if (response.status !== "success") throw new Error("Invalid OTP");
 
         // Token handling
-        const accessTokenValidity = 15 * 60 * 1000; // 7 days
+        const accessTokenValidity =  15 * 60 * 1000; // 7 days
+        
         const access = {
           accessToken: response.accessToken,
-          expireAt: Date.now() + accessTokenValidity,
+          expiresAt: Date.now() + accessTokenValidity,
         };
 
         localStorage.setItem("access_token", JSON.stringify(access));
@@ -112,7 +115,7 @@ class OtpVerification extends view {
         // Redirect quickly
         setTimeout(() => {
           window.location.assign(redirectUrl);
-        }, 1500);
+        }, 3000);
       } catch (err) {
         console.error("❌ OTP verification error:", err);
         alert("Invalid or expired OTP. Please try again.");
@@ -149,9 +152,11 @@ class OtpVerification extends view {
           throw new Error("Failed to resend OTP. Please try again.");
         }
 
+        console.log("✅ OTP resent successfully", response);
+
         const access_token = {
           accessToken: response.accessToken,
-          expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+          expiresAt: Date.now() + 3 * 60 * 1000, // 15 minutes
         };
 
         localStorage.setItem("access_token", JSON.stringify(access_token));

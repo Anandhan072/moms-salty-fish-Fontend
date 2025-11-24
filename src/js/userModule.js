@@ -2,6 +2,13 @@ import { API_AUTH } from "./config";
 import { user_Profile } from "./controller";
 import APIClient from "./utils/apiClient";
 
+/* ------------------------------------------------------------
+   CONSTANTS
+------------------------------------------------------------ */
+
+
+
+export const userInfo = { userDetails: {} };
 const STORAGE_KEYS = {
   access: "access_token",
   refresh: "refresh_token",
@@ -9,188 +16,335 @@ const STORAGE_KEYS = {
   user: "user_info",
 };
 
-const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000; // 2 min buffer before expiry
-export const userInfo = { userDetails: {} };
+// Refresh access token 2 minutes before expiry
+const TOKEN_REFRESH_BUFFER_MS = 2* 60 * 1000;
 
-const now = () => Date.now();
+// Session throttle check every 30 seconds
+const CHECK_INTERVAL_MS = 15 * 1000;
 
-/**
- * Generates or returns existing Device ID
- */
-export const getDeviceId = () => {
-  let deviceId = localStorage.getItem(STORAGE_KEYS.device);
-  if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem(STORAGE_KEYS.device, deviceId);
-  }
-  return deviceId;
+/* ------------------------------------------------------------
+   PERSISTENT INTERNAL STATE (survives page reload)
+------------------------------------------------------------ */
+const STATE_KEYS = {
+  lastCheckTime: "auth_last_check",
+  lastCheckResult: "auth_last_result",
+  refreshingAccess: "auth_refreshing",
 };
 
-/**
- * Clears all session data (tokens, user info)
- */
+// Get state safely
+const getState = (key, fallback) => {
+  try {
+    const v = sessionStorage.getItem(key);
+    return v !== null ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// Set state
+const setState = (key, val) => {
+  sessionStorage.setItem(key, JSON.stringify(val));
+};
+
+/* Runtime state loaded from sessionStorage */
+let lastCheckTime = getState(STATE_KEYS.lastCheckTime, 0);
+let lastCheckResult = getState(STATE_KEYS.lastCheckResult, false);
+let refreshingAccess = getState(STATE_KEYS.refreshingAccess, false);
+
+/* ------------------------------------------------------------
+   HELPERS
+------------------------------------------------------------ */
+const now = () => Date.now();
+
+const safeParse = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const store = (key, value) =>
+  localStorage.setItem(key, JSON.stringify(value));
+
+const remove = (key) => localStorage.removeItem(key);
+
+
+/* ------------------------------------------------------------
+   DEVICE ID
+------------------------------------------------------------ */
+
+export const getDeviceId = () => {
+  let id = localStorage.getItem(STORAGE_KEYS.device);
+
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(STORAGE_KEYS.device, id);
+  }
+
+  return id;
+};
+
+/* ------------------------------------------------------------
+   CLEAR SESSION
+------------------------------------------------------------ */
+
 export const clearSession = (reason = "") => {
-  console.warn(`⚠️ Session cleared: ${reason}`);
-  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  console.warn("⚠ Session cleared:", reason);
+
+  Object.values(STORAGE_KEYS).forEach(remove);
   userInfo.userDetails = {};
+
+  // Also reset internal session state
+  setState(STATE_KEYS.lastCheckResult, false);
+  setState(STATE_KEYS.refreshingAccess, false);
+
   window.dispatchEvent(new Event("sessionCleared"));
 };
 
-/**
- * Logs user out and redirects to signup
- */
-export const logoutFn = () => {
-  clearSession("User logged out");
-  window.location.href = "/signup";
+/* ------------------------------------------------------------
+   LOGOUT
+------------------------------------------------------------ */
+export const logoutFn = async () => {
+  try {
+    const active = await checkUserIsActive();
+
+    if (active) {
+      const access = safeParse(STORAGE_KEYS.access)?.accessToken;
+      const deviceId = getDeviceId();
+
+      await APIClient.post(`${API_AUTH}logout`, null, {
+        headers: {
+          Authorization: `Bearer ${access}`,
+          "Device-ID": deviceId,
+        },
+      });
+    }
+  } catch {}
+
+  clearSession("manual logout");
+  window.location.href = "/home";
 };
 
-/**
- * Returns default authenticated headers
- */
+/* ------------------------------------------------------------
+   ACCESS TOKEN REFRESH (SAFE)
+------------------------------------------------------------ */
 
-const getAuthHeaders = (token, deviceId) => ({
-  Authorization: `Bearer ${token}`,
-  "Device-ID": deviceId,
-});
+const refreshAccessToken = async () => {
 
-/**
- * Checks if the user session and tokens are valid
- */
-export const checkUserIsActive = async () => {
+  if (refreshingAccess) return false;
+
+  refreshingAccess = true;
+  setState(STATE_KEYS.refreshingAccess, true);
+
   try {
-    const refreshRaw = localStorage.getItem(STORAGE_KEYS.refresh);
-    const accessRaw = localStorage.getItem(STORAGE_KEYS.access);
-    const userRaw = localStorage.getItem(STORAGE_KEYS.user);
+    const refreshData = safeParse(STORAGE_KEYS.refresh);
+
+    if (!refreshData?.refreshToken) {
+      throw new Error("Missing refresh token");
+    }
+
     const deviceId = getDeviceId();
 
-    if (!refreshRaw || !deviceId) {
-      clearSession("Missing tokens");
-      return false;
+    const res = await APIClient.post(
+      `${API_AUTH}refresh-token`,
+      null,
+      {
+        headers: {
+          Authorization: `Bearer ${refreshData.refreshToken}`,
+          "Device-ID": deviceId,
+        },
+      }
+    );
+
+    if (!res?.accessToken) {
+      throw new Error("Invalid refresh response");
     }
 
-      console.log("🔍 Validating user session... complete refreshRaw and deviceId id Valide");
+    store(STORAGE_KEYS.access, {
+      accessToken: res.accessToken,
+      expiresAt: now() + 15 * 60 * 1000,
+    });
 
-    const refreshData = JSON.parse(refreshRaw);
-    const accessData = accessRaw ? JSON.parse(accessRaw) : null;
-    const userData = userRaw ? JSON.parse(userRaw) : null;
-    userInfo.userDetails = userData;
 
-    const timeNow = now();
-
-    // ❌ Refresh token expired
-    if (!refreshData.refreshToken || refreshData.expireAt <= timeNow) {
-      clearSession("Session expired");
-      return false;
-    }
-
-      console.log("🔍 Validating user session...  ❌Refresh token expired");
-
-    // 🕓 Refresh access token if expiring soon
-    if (!accessData?.accessToken || accessData.expireAt - TOKEN_REFRESH_BUFFER_MS <= timeNow) {
-      console.info("🔄 Refreshing access token...");
-      const res = await APIClient.post(`${API_AUTH}refresh-token`, null, {
-        headers: getAuthHeaders(refreshData.refreshToken, deviceId),
-      });
-
-      if (!res?.accessToken) throw new Error("Access token refresh failed");
-
-      const newAccessData = {
-        accessToken: res.accessToken,
-        expireAt: now() + res.expiresIn * 1000,
-      };
-
-      localStorage.setItem(STORAGE_KEYS.access, JSON.stringify(newAccessData));
-      window.dispatchEvent(new Event("tokenRefreshed"));
-      console.info("✅ Access token refreshed successfully");
-    }
-      console.log("🔍 Validating user session...  ❌Refresh token expired");
 
     return true;
   } catch (err) {
-    console.error("❌ checkUserIsActive error:", err);
-    clearSession("Session invalid");
+    console.error("❌ Access token refresh failed:", err);
+    clearSession("access refresh failed");
+    return false;
+  } finally {
+    refreshingAccess = false;
+    setState(STATE_KEYS.refreshingAccess, false);
+  }
+};
+
+/* ------------------------------------------------------------
+   MAIN SESSION VALIDATION
+------------------------------------------------------------ */
+
+export const checkUserIsActive = async () => {
+  const timeNow = now();
+
+  // ⏱ Throttle check - only run every 30 seconds
+  if (timeNow - lastCheckTime < CHECK_INTERVAL_MS) {
+    const userRaw = safeParse(STORAGE_KEYS.user);
+     userInfo.userDetails = userRaw || {};
+    return lastCheckResult;
+  }
+
+  lastCheckTime = timeNow;
+  setState(STATE_KEYS.lastCheckTime, timeNow);
+
+  try {
+    const refreshRaw = safeParse(STORAGE_KEYS.refresh);
+    const accessRaw = safeParse(STORAGE_KEYS.access);
+    const userRaw = safeParse(STORAGE_KEYS.user);
+
+    userInfo.userDetails = userRaw || {};
+
+    /* --------------------------------------------------
+       CASE 1: Guest user (no tokens) → allow browsing
+    -------------------------------------------------- */
+    if (!refreshRaw && !userRaw) {
+      lastCheckResult = false;
+      setState(STATE_KEYS.lastCheckResult, false);
+      clearSession("guest user");
+      return false;
+    }
+
+    /* --------------------------------------------------
+       CASE 2: Refresh token structure invalid
+    -------------------------------------------------- */
+
+    if (!refreshRaw?.refreshToken || !refreshRaw?.expiresAt) {
+      console.warn("⚠ Bad refresh token format – NOT clearing storage");
+      lastCheckResult = false;
+      setState(STATE_KEYS.lastCheckResult, false);
+      clearSession("bad refresh token format");
+      return false;
+    }
+
+    /* --------------------------------------------------
+       CASE 3: Refresh token expired → ONLY valid logout
+    -------------------------------------------------- */
+    if (refreshRaw.expiresAt <= timeNow) {
+      console.warn("❌ Refresh token expired → clearing session");
+      clearSession("refresh expired");
+      lastCheckResult = false;
+      setState(STATE_KEYS.lastCheckResult, false);
+      return false;
+    }
+
+    /* --------------------------------------------------
+       CASE 4: Access token expired → Refresh it
+    -------------------------------
+    ------------------- */
+console.log("Access Token Expiry Check:", { accessExpiry: accessRaw?.expiresAt, currentTime: timeNow, buffer: TOKEN_REFRESH_BUFFER_MS });
+
+console.log(accessRaw?.expiresAt - TOKEN_REFRESH_BUFFER_MS <= timeNow);
+
+console.log("Condition Result:", new Date(accessRaw?.expiresAt), new Date(timeNow), accessRaw?.expiresAt - TOKEN_REFRESH_BUFFER_MS, timeNow);
+  
+    if ( accessRaw?.expiresAt - TOKEN_REFRESH_BUFFER_MS <= timeNow) {
+
+      console.log("⏳ Access token expired/stale → refreshing");
+      const ok = await refreshAccessToken();
+      lastCheckResult = ok;
+      setState(STATE_KEYS.lastCheckResult, ok);
+      return ok;
+    }
+
+    /* --------------------------------------------------
+       VALID SESSION
+    -------------------------------------------------- */
+    lastCheckResult = true;
+    setState(STATE_KEYS.lastCheckResult, true);
+    return true;
+
+  } catch (err) {
+    console.error("❌ Session check failed (but NOT clearing tokens):", err);
+
+    // ⚠ DO NOT CLEAR STORAGE – just fail the check
+    lastCheckResult = false;
+    setState(STATE_KEYS.lastCheckResult, false);
     return false;
   }
 };
 
-/**
- * Updates cart item for logged-in user
- */
-export const updateCartItem = async (payload, retry = false) => {
-  try {
-    const active = await checkUserIsActive();
-    if (!active) throw new Error("Session invalid");
 
-    console.log("🛒 Updating cart item...", payload);
+/* ------------------------------------------------------------
+   UPDATE CART
+------------------------------------------------------------ */
 
-    const access = JSON.parse(localStorage.getItem(STORAGE_KEYS.access) || "{}");
-    const deviceId = getDeviceId();
+export const updateCartItem = async (payload) => {
+  const active = await checkUserIsActive();
+  if (!active) throw new Error("Session invalid");
 
-    const res = await APIClient.post(payload.url, payload.body || {}, {
-      headers: getAuthHeaders(access.accessToken, deviceId),
-    });
+  console.log("updateCartItem payload:", active, payload);
 
-    const currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || "{}");
-    currentUser.userProductInfo = {
-      ...currentUser.userProductInfo,
-      cart: res?.data?.cart || [],
-    };
+  const access = safeParse(STORAGE_KEYS.access)?.accessToken;
+  const deviceId = getDeviceId();
 
-    userInfo.userDetails = currentUser;
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(currentUser));
-
-    return res;
-  } catch (err) {
-    console.error("❌ updateCartItem failed:", err);
-
-    // Retry once if unauthorized
-    if (!retry && (err.status === 401 || err.message?.includes("401"))) {
-      const refreshed = await checkUserIsActive();
-      if (refreshed) return updateCartItem(payload, true);
+  const res = await APIClient.post(
+    payload.url,
+    payload.body || {},
+    {
+      headers: {
+        Authorization: `Bearer ${access}`,
+        "Device-ID": deviceId,
+      },
     }
+  );
 
-    clearSession("Cart update failed");
-    throw err;
-  }
-};
-
-/**
- * Generic user data fetch API
- */
-export const getUserAPI = async (url, options = {}) => {
-  try {
-    const deviceId = getDeviceId();
-    const res = await APIClient.post(url, options.body || {} )
-    userInfo.userDetails = res || {};
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res));
-    return res;
-  } catch (err) {
-    console.error("❌ getUserAPI error:", err);
-    throw err;
-  }
-};
-
-/**
- * Session Watcher — ensures user stays logged in
- */
-export const initSessionWatcher = () => {
-  const runCheck = async () => {
-    const status = await checkUserIsActive();
-    console.log("🧭 Session status:", status);
-    if (status) user_Profile();
+  const user = safeParse(STORAGE_KEYS.user) || {};
+  user.userProductInfo = {
+    ...user.userProductInfo,
+    cart: res?.data?.cart || [],
   };
 
-  // Watch for page load and navigation
-  ["load", "popstate", "pushstate"].forEach((evt) => window.addEventListener(evt, runCheck));
+  store(STORAGE_KEYS.user, user);
+  userInfo.userDetails = user;
 
-  // Patch pushState to detect client-side routing
-  const originalPushState = window.history.pushState;
-  window.history.pushState = function (...args) {
-    originalPushState.apply(this, args);
+  return res;
+};
+
+/* ------------------------------------------------------------
+   USER API (PROFILE FETCH)
+------------------------------------------------------------ */
+
+export const getUserAPI = async (url, options = {}) => {
+  const res = await APIClient.post(url, options.body || {});
+  store(STORAGE_KEYS.user, res.user);
+  console.log("getUserAPI fetched user:", res);
+  userInfo.userDetails = res.user;
+  return res;
+};
+
+/* ------------------------------------------------------------
+   SESSION WATCHER
+------------------------------------------------------------ */
+
+export const initSessionWatcher = () => {
+  const run = async () => {
+    const ok = await checkUserIsActive();
+
+    if (ok) user_Profile();
+  };
+
+  ["load", "popstate", "pushstate"].forEach((ev) =>
+    window.addEventListener(ev, run)
+  );
+
+  // Detect SPA navigation
+  const original = history.pushState;
+  history.pushState = function (...args) {
+    original.apply(this, args);
     window.dispatchEvent(new Event("pushstate"));
   };
 
-  console.log("✅ Session watcher initialized");
+
 };
 
 initSessionWatcher();
