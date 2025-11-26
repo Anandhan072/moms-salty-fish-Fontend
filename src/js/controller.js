@@ -148,7 +148,7 @@ export const singleProduct = async () => {
     const data = {
       productInfo: items,
       apiUrl: config.API_USER,
-      callFn: userProfile.updateCartItem,
+      callFn: userProfile.addCartItem,
       cartAdded: cartFind   // convert to true/false
     };
 
@@ -245,6 +245,9 @@ export const cartController = async () => {
 
     const data = {
       variants: cartOnly,
+      APIurl: config.API_USER,
+      updateCart: userProfile.updateUserCarts,
+      deleteCart: userProfile.deletCart,
       checkError: cartOnly.length === 0 ? false : true
     };
 

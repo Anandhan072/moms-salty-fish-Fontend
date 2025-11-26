@@ -3,13 +3,12 @@ import icons from "../../img/icon.svg";
 import view from "./view";
 
 class CartView extends view {
-
   /* -----------------------------
-     HTML Templates
+     Templates
   ----------------------------- */
 
   _itemCartHtml = `
-    <section class="cart-item">
+    <section class="cart-item" data-cart-id="%{_id}%">
       <div class="cart-item-img">
         <img src="%{cart-image}%" alt="%{cart-name}%">
       </div>
@@ -22,93 +21,70 @@ class CartView extends view {
 
         <span class="cart-priceContainer">
           <section class="items-content-main-price">
-            <span class="items-content-main-price-mrp">
-              <del>Rs. %{MRP}%.00</del> |
-            </span>
-
-            <span class="items-content-main-price-selling-price">
-              Rs. %{price}%.00 |
-            </span>
-
-            <span class="items-content-main-price-offer">
-              Offer %{offer}%
-            </span>
+            <span><del>Rs. %{MRP}%.00</del> |</span>
+            <span>Rs. %{price}%.00 |</span>
+            <span>Offer %{offer}%</span>
           </section>
         </span>
 
-        <span class="cart-items-weight">
-          %{weight}% g
-        </span>
+        <span class="cart-items-weight">%{weight}% g</span>
 
         <span class="cart-item-quantity">
-          <label for="quantity">Qty:</label>
-          <input 
-            type="number" 
-            class="cart-qty-input"
-            min="1" 
-            value="%{qty}%" 
-            max="10"
-          >
+          <label>Qty:</label>
+          <span class="cart-qty-input" data-value="%{qty}%">%{qty}%</span>
         </span>
 
         <span class="cart-item-input-change">
-          <button class="cart-item-change-input cart-item-decrease" data-decrease="-1">-</button>
-          <button class="cart-item-remove">remove</button>
-          <button class="cart-item-change-input cart-item-increase" data-increase="1">+</button>
+          <button data-action="dec">-</button>
+          <button data-action="remove">remove</button>
+          <button data-action="inc">+</button>
         </span>
 
         <span class="cart-item-delivery">
           Delivery time: Up to 2 weeks
         </span>
       </div>
-    </section>`;
+    </section>
+  `;
 
   _priceDetialsHtml = `
-    <section class="cart-item-price-detials">
-      PRICE DETAILS
+    <section class="cart-item-price-detials">PRICE DETAILS</section>
+
+    <section>
+      <span>Price (%{count}% items)</span>
+      <span>₹%{total-mrp}%</span>
     </section>
 
-    <section class="cart-items-nos-and-price">
-      <span>Price (%{no's}% items)</span>
-      <span>₹%{total-price}%</span>
-    </section>
-
-    <section class="cart-items-discount-price">
+    <section>
       <span>Discount</span>
-      <span>− ₹%{offer-price}%</span>
+      <span>− ₹%{discount}%</span>
     </section>
 
-    <section class="cart-items-courier-fee">
+    <section>
       <span>Courier Fee</span>
-      <span>₹100</span>
+      <span>₹%{courier}%</span>
     </section>
 
-    <section class="cart-items-totel">
+    <section>
       <span>Total Amount</span>
-      <span>₹%{price}%</span>
+      <span>₹%{final}%</span>
     </section>
 
-    <section class="cart-item-your-saving">
-      You will save ₹%{total-offer}% on this order
+    <section>
+      You will save ₹%{discount}% on this order
     </section>
   `;
 
-  _errorMessage = `
-    Your cart is currently empty. 
-    Please add items to your cart to proceed to checkout.
-  `;
+  _errorMessage = `Your cart is currently empty.`;
+  _courierFee = 100;
 
   /* -----------------------------
-     Main Render Functions
+     Render
   ----------------------------- */
 
   _generateMarkup() {
-    let markup = this._data;
+    let markup = this._data.replaceAll("%{icons}%", icons);
 
-    // Replace icons
-    markup = markup.replaceAll("%{icons}%", icons);
-
-    // Replace empty-cart message
     if (!this._subData?.checkError) {
       markup = markup.replaceAll("%{errorMessage}%", this._errorMessage);
     }
@@ -119,35 +95,38 @@ class CartView extends view {
   _prepperPage() {
     if (!this._subData) return;
 
-    const { variants } = this._subData;
-
-    this._nodeDom = {
-      cartItemDom: $('.cart-cotainer-1'),
-      priceDetialDom: $('.cart-items-price')
+    this._dom = {
+      cartList: $(".cart-cotainer-1"),
+      priceBox: $(".cart-items-price"),
     };
 
-    this._renderCarts(variants, this._nodeDom.cartItemDom);
-    this._renderTotelAmoount(variants, this._nodeDom.priceDetialDom);
+    this._render();
+    this._bindEvents();
   }
 
   /* -----------------------------
-     Cart Items Rendering
+     Render Functions
   ----------------------------- */
 
-  _renderCarts(variants, htmlDom) {
+  _render() {
+    this._renderCartItems();
+    this._renderPriceDetails();
+  }
+
+  _renderCartItems() {
+    const { variants } = this._subData;
+
     if (!variants?.length) {
-      htmlDom.innerHTML = `<p>${this._errorMessage}</p>`;
+      this._dom.cartList.innerHTML = `<p>${this._errorMessage}</p>`;
       return;
     }
 
-    const markup = variants
-      .map(item => this._changeCartData(item.product, item.variant, item.cartItem))
+    this._dom.cartList.innerHTML = variants
+      .map((v) => this._buildCartItem(v))
       .join("");
-
-    htmlDom.innerHTML = markup;
   }
 
-  _changeCartData(product, variant, cartItem) {
+  _buildCartItem({ product, variant, cartItem }) {
     return this._itemCartHtml
       .replaceAll("%{cart-image}%", product.mainPhoto || "")
       .replaceAll("%{cart-name}%", product.name || "")
@@ -155,46 +134,145 @@ class CartView extends view {
       .replaceAll("%{price}%", variant.price || 0)
       .replaceAll("%{offer}%", variant.offerPercentage || 0)
       .replaceAll("%{weight}%", variant.weight?.value || 0)
-      .replaceAll("%{qty}%", cartItem.quantity || 1);
+      .replaceAll("%{qty}%", cartItem.quantity || 1)
+      .replaceAll("%{_id}%", cartItem._id || "");
   }
 
-  /* -----------------------------
-     Price Details Rendering
-  ----------------------------- */
-
-  _renderTotelAmoount(carts, dom) {
-    if (!carts?.length) return;
+  _renderPriceDetails() {
+    const carts = this._subData.variants;
 
     const totals = carts.reduce(
-      (acc, item) => {
-        acc.mrp += Number(item?.variant?.MRP || 0);
-        acc.price += Number(item?.variant?.price || 0);
+      (acc, { cartItem, variant }) => {
+        acc.mrp += Number(variant.MRP) * Number(cartItem.quantity);
+        acc.price += Number(variant.price) * Number(cartItem.quantity);
         return acc;
       },
       { mrp: 0, price: 0 }
     );
 
     const discount = totals.mrp - totals.price;
-    const courierFee = 100;
-    const finalAmount = totals.price + courierFee;
 
-    const output = this._priceDetialsHtml
-      .replaceAll("%{total-price}%", totals.mrp)
-      .replaceAll("%{offer-price}%", discount)
-      .replaceAll("%{price}%", finalAmount)
-      .replaceAll("%{total-offer}%", discount)
-      .replaceAll("%{no's}%", carts.length);
-
-    dom.innerHTML = output;
+    this._dom.priceBox.innerHTML = this._priceDetialsHtml
+      .replaceAll("%{total-mrp}%", totals.mrp)
+      .replaceAll("%{discount}%", discount)
+      .replaceAll("%{courier}%", this._courierFee)
+      .replaceAll("%{final}%", totals.price + this._courierFee)
+      .replaceAll("%{count}%", carts.length);
   }
 
-
   /* -----------------------------
-     Quantity Change request
+     Events
   ----------------------------- */
 
+  _bindEvents() {
+    this._dom.cartList.addEventListener(
+      "click",
+      this._handleCartActions.bind(this)
+    );
+  }
 
+  /* -----------------------------
+     API Helpers
+  ----------------------------- */
 
+  async _helperCartUpdate(url, id, qty) {
+    const payload = {
+      url: `${url}update-cart`,
+      body: { updateQty: qty, cartId: id },
+    };
+
+    try {
+      return await this._subData.updateCart(payload);
+    } catch (err) {
+      console.error("Cart update failed:", err);
+    }
+  }
+
+  async _helperRemoveCart(url, id) {
+    const payload = {
+      url: `${url}update-cart/${id}`,
+    };
+
+    try {
+      return await this._subData.deleteCart(payload);
+    } catch (err) {
+      console.error("Cart remove failed:", err);
+    }
+  }
+
+  /* -----------------------------
+     Action Handler
+  ----------------------------- */
+
+  async _handleCartActions(e) {
+    const button = e.target.closest("button");
+    if (!button) return;
+
+    const cartItem = button.closest(".cart-item");
+    if (!cartItem) return;
+
+    const cartId = cartItem.dataset.cartId;
+    const qtyEl = cartItem.querySelector(".cart-qty-input");
+
+    if (!cartId || !qtyEl) return;
+
+    const action = button.dataset.action;
+
+    /* === REMOVE === */
+    if (action === "remove") {
+      // UI + State
+      this._removeItem(cartId, cartItem);
+
+      // Backend sync
+      await this._helperRemoveCart(this._subData.APIurl, cartId);
+      return;
+    }
+
+    /* === INC / DEC === */
+    let qty = Number(qtyEl.dataset.value);
+
+    if (action === "inc") {
+      if (qty >= 10) return console.warn("Max quantity reached");
+      qty++;
+    }
+
+    if (action === "dec") {
+      qty = Math.max(1, qty - 1);
+    }
+
+    // UI
+    qtyEl.dataset.value = qty;
+    qtyEl.textContent = qty;
+
+    // Local data
+    const item = this._subData.variants.find(
+      (v) => v.cartItem._id === cartId
+    );
+
+    if (item) {
+      item.cartItem.quantity = qty;
+    }
+
+    // Recalculate totals
+    this._renderPriceDetails();
+
+    // Backend sync
+    await this._helperCartUpdate(this._subData.APIurl, cartId, qty);
+  }
+
+  /* -----------------------------
+     Remove Item
+  ----------------------------- */
+
+  _removeItem(cartId, cartDom) {
+    cartDom.remove();
+
+    this._subData.variants = this._subData.variants.filter(
+      (v) => v.cartItem._id !== cartId
+    );
+
+    this._renderPriceDetails();
+  }
 }
 
 export default new CartView();

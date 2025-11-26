@@ -447,7 +447,7 @@ class SingleProductView extends view {
 
       try {
         // Prefer await and handle errors
-        const res = await callFn({ url: `${apiUrl}updateCart`, body: cartItem });
+        const res = await callFn({ url: `${apiUrl}add-cart`, body: cartItem });
         console.log("Add-to-cart response:", res);
 
         // If API says success, update UI to "GO TO CART"

@@ -26,11 +26,14 @@ export default class APIClient {
 
       const headers = { ...customHeaders };
 
+      console.log(headers)
+
       // Automatically set JSON header unless it's FormData
       if (!(body instanceof FormData)) {
         headers["Content-Type"] = "application/json";
       }
 
+      
       // Add Bearer token if provided
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -40,6 +43,9 @@ export default class APIClient {
         signal: controller.signal,
         ...rest,
       };
+
+
+      console.log("fetchOptions.:", fetchOptions)
 
       if (body) {
         fetchOptions.body = body instanceof FormData ? body : JSON.stringify(body);
@@ -107,7 +113,7 @@ export default class APIClient {
     return this.request(url, { ...options, method: "PATCH", body });
   }
 
-  static delete(url, options = {}) {
-    return this.request(url, { ...options, method: "DELETE" });
-  }
+ static delete(url, body = null, options = {}) {
+  return this.request(url, { ...options, method: "DELETE", body });
+}
 }
