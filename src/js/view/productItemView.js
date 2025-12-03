@@ -6,7 +6,10 @@ class ProductItemView extends view {
   _parentElement;
 
   _generateMarkup() {
+      console.log('kjhshjssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssskjhsk')
+
     const page = paginateArray(this._data);
+    console.log(page)
     const count = this._getQueryParam("count");
 
     let markup;

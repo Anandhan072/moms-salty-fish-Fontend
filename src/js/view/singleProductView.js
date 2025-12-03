@@ -1,63 +1,96 @@
+// singleProductView.optimized.js
 import { $, $$ } from "../utils/dom.js";
 import icons from "../../img/icon.svg";
 import view from "./view";
 
 class SingleProductView extends view {
+  constructor() {
+    super();
+    // Cache for frequently used selector strings (avoid typos)
+    this.selectors = {
+      mainImage: ".items-main-image-big img",
+      thumbsLi: ".items-main-image-small-li img",
+      reviewBtn: ".items-reviews-users-btn",
+      reviewPanel: "#user-review",
+      closeBtn: ".user-review-close-btn",
+      overlay: "#reviews-container",
+      priceVariantsContainer: ".items-content-main-grams-btn",
+      variantButton: ".items-content-main-grams-btn-variant",
+      quantityValue: ".items-content-main-quantity-value",
+      quantityBtns: ".items-content-main-quantity-btn-less-add",
+      addCartBtn: ".items-content-main-btn-addcart",
+      quantityContainer: ".items-content-main-quantity",
+      priceEl: ".items-content-main-price",
+      productHeader: ".items-content-main-header h1",
+      descContainer: ".items-content-main-product-container",
+      reviewSummary: ".items-reviews-container-rating",
+      userComments: ".items-reviews-users",
+      allReviews: ".user-review-container",
+      smallImagesUl: ".items-main-image-small-ul",
+    };
+  }
+
   /* -------------------------
      Public API (rendering)
      ------------------------- */
 
   _generateMarkup() {
-    return this._data.replaceAll("%{icons}%", icons);
+    return (this._data || "").replaceAll("%{icons}%", icons);
   }
 
-  /* Backwards-compatible name + new preferred name */
+  // backward compatible (keep old name pointing to new)
   _prepperPage() {
     return this._preparePage();
   }
 
   _preparePage() {
     if (!this._subData) return;
-    const { productInfo, apiUrl, callFn, cartAdded } = this._subData;
+    const { productInfo = {}, apiUrl, callFn, cartAdded = [],  payment, } = this._subData;
 
-    // Render static parts
+    // render static parts
     this._setMainImage(productInfo);
     this._renderSmallImages(productInfo);
-    this._renderText(".items-content-main-header h1", productInfo.name);
+    this._renderText(this.selectors.productHeader, productInfo.name);
     this._renderPrice(productInfo.variants?.[0]);
-    this._renderVariantButtons(productInfo.variants || []);
-    this._renderDescription(productInfo.description);
-    this._renderReviewSummary(productInfo.userReviews);
-    this._renderReviewGraph(productInfo.userReviews);
-    this._renderUserComments(productInfo.userReviews);
-    this._renderAllUserReview(productInfo.userReviews);
+    this._renderVariantButtons(productInfo.variants || [], productInfo.id, cartAdded);
+    this._renderDescription(productInfo.description || []);
+    this._renderReviewSummary(productInfo.userReviews || []);
+    this._renderReviewGraph(productInfo.userReviews || []);
+    this._renderUserComments(productInfo.userReviews || []);
+    this._renderAllUserReview(productInfo.userReviews || []);
 
-    // Wire up interactive behavior (single-time init)
-    this._initInteractionHandlers(productInfo.id, productInfo.variants, apiUrl, callFn, cartAdded);
+    // init interactions once
+    this._initInteractionHandlers(productInfo.id, productInfo.variants || [], apiUrl, callFn, cartAdded);
+    this._handleOrderClick(payment);
   }
 
   /* -------------------------
      Helpers: rendering small parts
      ------------------------- */
 
-  _setMainImage({ photos, sortName } = {}) {
-    const img = $(".items-main-image-big img");
-    if (!img || !photos?.length) return;
+  _setMainImage({ photos = [], sortName } = {}) {
+    const img = $(this.selectors.mainImage);
+    if (!img || !photos.length) return;
     const main = photos.find((p) => p.main) ?? photos[0];
-    img.src = main.url;
+    img.src = main?.url || "";
     img.alt = sortName || "Product image";
   }
 
-  _renderSmallImages({ photos } = {}) {
-    const ul = $(".items-main-image-small-ul");
-    if (!ul || !photos?.length) return;
-    ul.innerHTML = photos
-      .map(
-        (src, i) => `<li class="items-main-image-small-li">
-          <img class="items-main-image-small-img ${src.main === true ? "active" : ""}" src="${src.url}" alt="Thumbnail ${i + 1}"/>
-        </li>`
-      )
-      .join("");
+  _renderSmallImages({ photos = [] } = {}) {
+    const ul = $(this.selectors.smallImagesUl);
+    if (!ul) return;
+    ul.innerHTML = ""; // clear
+
+    if (!photos.length) return;
+
+    const frag = document.createDocumentFragment();
+    photos.forEach((p, i) => {
+      const li = document.createElement("li");
+      li.className = "items-main-image-small-li";
+      li.innerHTML = `<img class="items-main-image-small-img ${p.main === true ? "active" : ""}" src="${p.url}" alt="Thumbnail ${i + 1}" />`;
+      frag.appendChild(li);
+    });
+    ul.appendChild(frag);
   }
 
   _renderText(selector, text) {
@@ -66,10 +99,9 @@ class SingleProductView extends view {
   }
 
   _renderPrice(variant) {
-    if (!variant) return;
-    const priceEl = $(".items-content-main-price");
-    if (!priceEl) return;
-    const { MRP, price } = variant;
+    const priceEl = $(this.selectors.priceEl);
+    if (!priceEl || !variant) return;
+    const { MRP = 0, price = 0 } = variant;
     const offer = this._findPercentageOffer(MRP, price);
     priceEl.innerHTML = `
       <span class="items-content-main-price-mrp"><del>Rs. ${MRP}.00</del> |</span>
@@ -77,62 +109,94 @@ class SingleProductView extends view {
       <span class="items-content-main-price-offer">Offer ${offer}%</span>`;
   }
 
-  _renderVariantButtons(variants = []) {
-    const container = $(".items-content-main-grams-btn");
-    if (!container || !variants.length) return;
+  _renderVariantButtons(variants = [],  id) {
+    console.log(id)
 
-    // use dataset weight on each button (string)
-    container.innerHTML = variants
-      .map(
-        ({ weight, price, MRP }) =>
-          `<button type="button" class="items-content-main-grams-btn-variant" data-quantity="${weight.value}" data-price="${price}" data-mrp="${MRP}">${weight.value} grams</button>`
-      )
-      .join("");
+    const container = $(this.selectors.priceVariantsContainer);
+    console.log(container)
+    if (!container) return;
 
-    // Initialize query params (first variant and quantity)
-    this._updateQueryParam("weight", String(variants[0].weight.value));
-    this._updateQueryParam("quantity", 1);
+    // Build markup with fragment for safety
+    container.innerHTML = "";
+    if (!variants.length) return;
+
+    const frag = document.createDocumentFragment();
+    variants.forEach((v) => {
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "items-content-main-grams-btn-variant";
+      btn.dataset.itemid = id ?? v.itemId ?? "";
+      btn.dataset.variantid = v.id ?? v.variantId ?? "";
+      btn.dataset.quantity = String(v.weight?.value ?? "");
+      btn.dataset.price = String(v.price ?? "");
+      btn.dataset.mrp = String(v.MRP ?? "");
+      btn.textContent = `${v.weight?.value ?? ""} grams`;
+      frag.appendChild(btn);
+    });
+    container.appendChild(frag);
+    
   }
 
   _renderDescription(descriptions = []) {
-    const container = $(".items-content-main-product-container");
-    if (!container || !descriptions.length) return;
+    const container = $(this.selectors.descContainer);
+    if (!container) return;
+    container.innerHTML = "";
 
-    const markup = descriptions
-      .map(({ header, content }) => {
-        const items = content?.split("%{li}%").filter((txt) => txt.trim().length > 2);
-        return items?.length > 1
-          ? `<section class="items-content-main-product">
-              <h3 class="items-content-main-product-header">${header}</h3>
-              <ul class="items-content-main-product-para-ul">
-                ${items.map((li) => `<li>${li.trim()}</li>`).join("")}
-              </ul>
-            </section>`
-          : `<section class="items-content-main-product">
-              ${header ? `<h3 class="items-content-main-product-header">${header}</h3>` : ""}
-              <blockquote class="items-content-main-product-para">${content}</blockquote>
-            </section>`;
-      })
-      .join("");
+    if (!descriptions.length) return;
 
-    container.innerHTML = `${markup}
-      <section class="items-content-main-product">
-        <blockquote class="items-content-main-product-para">
-          <b>More details and recipe ideas:</b>
-          <a href="">Visit this link →</a>
-        </blockquote>
-      </section>`;
+    const frag = document.createDocumentFragment();
+    descriptions.forEach(({ header, content = "" }) => {
+      const section = document.createElement("section");
+      section.className = "items-content-main-product";
+
+      const items = content.split("%{li}%").map((s) => s.trim()).filter(Boolean);
+      if (items.length > 1) {
+        if (header) {
+          const h3 = document.createElement("h3");
+          h3.className = "items-content-main-product-header";
+          h3.textContent = header;
+          section.appendChild(h3);
+        }
+        const ul = document.createElement("ul");
+        ul.className = "items-content-main-product-para-ul";
+        items.forEach((liText) => {
+          const li = document.createElement("li");
+          li.textContent = liText;
+          ul.appendChild(li);
+        });
+        section.appendChild(ul);
+      } else {
+        if (header) {
+          const h3 = document.createElement("h3");
+          h3.className = "items-content-main-product-header";
+          h3.textContent = header;
+          section.appendChild(h3);
+        }
+        const block = document.createElement("blockquote");
+        block.className = "items-content-main-product-para";
+        block.textContent = content;
+        section.appendChild(block);
+      }
+      frag.appendChild(section);
+    });
+
+    // add "more details" always
+    const more = document.createElement("section");
+    more.className = "items-content-main-product";
+    more.innerHTML = `<blockquote class="items-content-main-product-para"><b>More details and recipe ideas:</b> <a href="">Visit this link →</a></blockquote>`;
+    frag.appendChild(more);
+
+    container.appendChild(frag);
   }
 
   _renderReviewSummary(reviews = []) {
-    const el = $(".items-reviews-container-rating");
+    const el = $(this.selectors.reviewSummary);
     if (!el) return;
     if (!reviews.length) return (el.innerHTML = "<span>No reviews yet</span>");
-
-    const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+    const total = reviews.reduce((s, r) => s + (r.rating || 0), 0);
     const avg = this._truncateToOneDecimal(total / reviews.length);
     const withComment = reviews.filter((r) => r.comment?.trim()).length;
-
     el.innerHTML = `
       <span class="items-reviews-container-rating-value">
         ${avg}
@@ -151,215 +215,186 @@ class SingleProductView extends view {
     const count = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     reviews.forEach(({ rating }) => (count[rating] = (count[rating] || 0) + 1));
     const total = reviews.length || 1;
-
-    for (const r in count) {
+    Object.keys(count).forEach((r) => {
       const el = $(`.reviews-container-graf-sec-span-${r}`);
       if (el) el.style.width = `${((count[r] / total) * 100).toFixed(1)}%`;
-    }
+    });
   }
 
   _renderUserComments(reviews = []) {
-    const container = $(".items-reviews-users");
+    const container = $(this.selectors.userComments);
     if (!container) return;
-
-    container.innerHTML = ""; // clear first
+    container.innerHTML = "";
     reviews
+      .slice()
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       .slice(0, 2)
-      .forEach(({ id, userProfile, userName, rating, updatedAt, comment, commentImage }) => {
-        const images = Array.isArray(commentImage) ? commentImage : commentImage ? [commentImage] : [];
-        const date = new Date(updatedAt);
-        const options = { day: "2-digit", month: "short", year: "numeric" };
-        const formattedDate = date.toLocaleDateString("en-GB", options).replace(",", "");
-        const markup = `<div class="items-reviews-user-reviews" data-user-comment-id="${id}">
-          <section class="items-reviews-user-reviews-img-span">
-            <img src="${userProfile}" alt="User Profile Image" class="items-reviews-user-reviews-img"/>
-            <span class="items-reviews-user-reviews-name">${userName}</span>
-            <span class="items-reviews-user-reviews-name-verified">Verified
-              <svg class="icon" width="20" height="24">
-                <use href="${icons}#icon-tick"></use>
-              </svg>
-            </span>
-          </section>
-          <section class="items-reviews-user-rating">
-            <span class="items-reviews-user-rating-value">${rating}
-              <svg class="icon" width="20" height="24"><use href="${icons}#icon-star"></use></svg>
-            </span>
-            <span class="items-reviews-user-rating-dot"></span>
-            <span class="items-reviews-user-rating-date">Posted on ${formattedDate}</span>
-          </section>
-          <section class="items-reviews-user-rating-message">
-            <p>${comment}</p>
-            <span class="items-reviews-user-rating-message-img">
-              ${images.map((img) => `<img src="${img}" alt="user-comment-img"/>`).join("")}
-            </span>
-          </section>
-        </div>`;
+      .forEach((r) => {
+        const markup = this._buildReviewMarkup(r);
         container.insertAdjacentHTML("beforeend", markup);
       });
   }
 
   _renderAllUserReview(reviews = []) {
-    const container = $(".user-review-container");
+    const container = $(this.selectors.allReviews);
     if (!container) return;
     container.innerHTML = "";
-
     reviews
+      .slice()
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-      .forEach(({ id, userProfile, userName, rating, updatedAt, comment, commentImage }) => {
-        const images = Array.isArray(commentImage) ? commentImage : commentImage ? [commentImage] : [];
-        const date = new Date(updatedAt);
-        const options = { day: "2-digit", month: "short", year: "numeric" };
-        const formattedDate = date.toLocaleDateString("en-GB", options).replace(",", "");
-        const markup = `<div class="items-reviews-user-reviews">
-            <section class="items-reviews-user-reviews-img-span">
-              <img src="${userProfile}" alt="${userName}" class="items-reviews-user-reviews-img"/>
-              <span class="items-reviews-user-reviews-name">${userName}</span>
-              <span class="items-reviews-user-reviews-name-verified">Verified
-                <svg class="icon" width="20" height="24"><use href="${icons}#icon-tick"></use></svg>
-              </span>
-            </section>
-            <section class="items-reviews-user-rating">
-              <span class="items-reviews-user-rating-value">${rating}<svg class="icon" width="20" height="24"><use href="${icons}#icon-star"></use></svg></span>
-              <span class="items-reviews-user-rating-dot"></span>
-              <span class="items-reviews-user-rating-date">Posted on ${formattedDate}</span>
-            </section>
-            <section class="items-reviews-user-rating-message">
-              <p>${comment}</p>
-              <span class="items-reviews-user-rating-message-img">
-                ${images.map((img) => `<img src="${img}" alt="user-comment-img"/>`).join("")}
-              </span>
-            </section>
-          </div>`;
+      .forEach((r) => {
+        const markup = this._buildReviewMarkup(r);
         container.insertAdjacentHTML("beforeend", markup);
       });
   }
 
-
-
-   _helperFindAlreadyInCart(cartAdded = [], btn, weight) {
-
-    const quantityContainer = this._nodes.quantityContainer;
-
-  const alreadyInCart = cartAdded.some(
-    (item) => {
-      console.log("Comparing cart item weight:", item.weight, weight);
-      return String(item.weight) === String(weight)}
-  );
-
-  console.log("Already in cart check:", alreadyInCart, weight);
-  if (alreadyInCart) {
-    btn.textContent = "GO TO CART";
-    btn.checkBtn = "true";
-    if (quantityContainer) quantityContainer.style.display = "none";
-    return true;
-  } else {
-    btn.textContent = "ADD TO CART";
-      btn.checkBtn = "false";
-    if (quantityContainer) quantityContainer.style.display = "block";
-    
-    return false;
+  _buildReviewMarkup({ id, userProfile, userName, rating, updatedAt, comment, commentImage } = {}) {
+    const images = Array.isArray(commentImage) ? commentImage : commentImage ? [commentImage] : [];
+    const date = new Date(updatedAt || Date.now());
+    const formattedDate = date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(",", "");
+    return `<div class="items-reviews-user-reviews" data-user-comment-id="${id || ""}">
+      <section class="items-reviews-user-reviews-img-span">
+        <img src="${userProfile || ""}" alt="User Profile Image" class="items-reviews-user-reviews-img"/>
+        <span class="items-reviews-user-reviews-name">${userName || "Anonymous"}</span>
+        <span class="items-reviews-user-reviews-name-verified">Verified
+          <svg class="icon" width="20" height="24"><use href="${icons}#icon-tick"></use></svg>
+        </span>
+      </section>
+      <section class="items-reviews-user-rating">
+        <span class="items-reviews-user-rating-value">${rating || 0}<svg class="icon" width="20" height="24"><use href="${icons}#icon-star"></use></svg></span>
+        <span class="items-reviews-user-rating-dot"></span>
+        <span class="items-reviews-user-rating-date">Posted on ${formattedDate}</span>
+      </section>
+      <section class="items-reviews-user-rating-message">
+        <p>${comment || ""}</p>
+        <span class="items-reviews-user-rating-message-img">
+          ${images.map((img) => `<img src="${img}" alt="user-comment-img"/>`).join("")}
+        </span>
+      </section>
+    </div>`;
   }
-}
-
 
   /* -------------------------
      Interaction wiring (single place)
      ------------------------- */
+ /* -------------------------
+     Interaction wiring (single place) -- helepr 
+     ------------------------- */
 
-  _initInteractionHandlers(id, variants = [], apiUrl, callFn, cartAdded) {
+     _getQuey(){
 
-    console.log("Init interaction handlers for single product view", cartAdded);
-    // Cache DOM nodes we need
+      return {
+        weight: this._getQueryParam('weight') || 0,
+        quantity: this._getQueryParam('quantity') || 1,
+        productId: this._getQueryParam('productId') || null,
+        variantId: this._getQueryParam('variantId') || null
+
+        
+      }
+     }
+
+    _getQuery() {
+  return {
+    weight: Number(this._getQueryParam('weight')) || 0,
+    quantity: Number(this._getQueryParam('quantity')) || 1,
+    productId: this._getQueryParam('productId') || null,
+    variantId: this._getQueryParam('variantId') || null
+  };
+}
+
+_setQuery(weight, quantity, pId, vId) {
+  // Update values in URL
+  if (weight !== undefined) this._updateQueryParam('weight', weight);
+  if (quantity !== undefined) this._updateQueryParam('quantity', quantity);
+  if (pId !== undefined) this._updateQueryParam('productId', pId);
+  if (vId !== undefined) this._updateQueryParam('variantId', vId);
+  // Return updated query object
+  return this._getQuery();
+}
+
+
+  _initInteractionHandlers(id, variants = [], apiUrl, callFn, cartAdded = []) {
+    // cache nodes once (safe fallbacks)
     this._nodes = {
-      fullImage: $(".items-main-image-big img"),
-      thumbs: $$(".items-main-image-small-li img"),
-      reviewBtn: $(".items-reviews-users-btn"),
-      reviewPanel: $("#user-review"),
-      closeBtn: $(".user-review-close-btn"),
-      overlay: $("#reviews-container"),
-      priceVariantsContainer: $(".items-content-main-grams-btn"),
-      priceVariantButtons: $$(".items-content-main-grams-btn-variant"),
-      quantityValue: $(".items-content-main-quantity-value"),
-      quantityBtns: $$(".items-content-main-quantity-btn-less-add"),
-      addCartBtn: $(".items-content-main-btn-addcart"),
-      quantityContainer: $(".items-content-main-quantity"),
+      fullImage: $(this.selectors.mainImage),
+      thumbs: Array.from($$(this.selectors.thumbsLi) || []),
+      reviewBtn: $(this.selectors.reviewBtn),
+      reviewPanel: $(this.selectors.reviewPanel),
+      closeBtn: $(this.selectors.closeBtn),
+      overlay: $(this.selectors.overlay),
+      priceVariantsContainer: $(this.selectors.priceVariantsContainer),
+      priceVariantButtons: Array.from($$(this.selectors.variantButton) || []),
+      quantityValue: $(this.selectors.quantityValue),
+      quantityBtns: Array.from($$(this.selectors.quantityBtns) || []),
+      addCartBtn: $(this.selectors.addCartBtn),
+      quantityContainer: $(this.selectors.quantityContainer),
     };
 
-    // Setup thumbs click (if present)
-    this._nodes.thumbs.forEach((img) =>
+    // thumbs click Image 
+    this._nodes.thumbs.forEach((img) => {
       img.addEventListener("click", () => {
         if (!this._nodes.fullImage) return;
         this._nodes.fullImage.src = img.src;
         this._nodes.thumbs.forEach((t) => t.classList.remove("active"));
         img.classList.add("active");
-      })
-    );
+      });
+    });
 
-    // Review overlay toggles
+    // review overlay toggles
     const toggleReview = (show) => {
       if (!this._nodes.overlay || !this._nodes.reviewPanel) return;
       this._nodes.overlay.style.display = show ? "block" : "none";
       this._nodes.reviewPanel.style.right = show ? "0" : "-100%";
       document.body.style.overflowY = show ? "hidden" : "auto";
     };
-    this._nodes.reviewBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      toggleReview(true);
-    });
-    this._nodes.closeBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      toggleReview(false);
-    });
+    this._nodes.reviewBtn?.addEventListener("click", (e) => { e.preventDefault(); toggleReview(true); });
+    this._nodes.closeBtn?.addEventListener("click", (e) => { e.preventDefault(); toggleReview(false); });
     this._nodes.overlay?.addEventListener("click", (e) => e.target === this._nodes.overlay && toggleReview(false));
 
-
-    // varitate default selection
-
-    let weightParam = this._getQueryParam("weight");
-    let quantityParam = this._getQueryParam("quantity");
-
+    // set default variant active based on query params
+    const weightParam = this._getQueryParam("weight");
+    const quantityParam = this._getQueryParam("quantity") || "1";
 
     if (this._nodes.priceVariantButtons.length > 0) {
-      const defaultVariantBtn = Array.from(this._nodes.priceVariantButtons).find((btn => btn.dataset.quantity === weightParam))
+      const defaultBtn = this._nodes.priceVariantButtons.find((b) => b.dataset.quantity === weightParam);
+      const chosen = defaultBtn || this._nodes.priceVariantButtons[0];
+      chosen.classList.add("items-content-main-grams-btn-variant-active");
 
-      if (defaultVariantBtn) {
-        defaultVariantBtn.classList.add("items-content-main-grams-btn-variant-active");
-        this._nodes.quantityValue.textContent = quantityParam || "1";
-      } else {
-        this._nodes.priceVariantButtons[0].classList.add("items-content-main-grams-btn-variant-active");
-        this._updateQueryParam("weight", this._nodes.priceVariantButtons[0].dataset.quantity);
-      }
+      if (this._nodes.quantityValue) this._nodes.quantityValue.textContent = quantityParam;
+
+        this._setQuery(weightParam, quantityParam, chosen.dataset.itemid, chosen.dataset.variantid)
+      // if (!defaultBtn) this._updateQueryParam("weight", chosen.dataset.quantity);
     }
 
-    // Variant click handling (delegation: one listener on container)
+    // variant selection (delegation)
     const container = this._nodes.priceVariantsContainer;
     if (container) {
       container.addEventListener("click", (e) => {
         const btn = e.target.closest(".items-content-main-grams-btn-variant");
         if (!btn) return;
-        const currentActive = container.querySelector(".items-content-main-grams-btn-variant-active");
-        if (currentActive === btn) return;
-        currentActive?.classList.remove("items-content-main-grams-btn-variant-active");
+        const active = container.querySelector(".items-content-main-grams-btn-variant-active");
+        if (active === btn) return;
+        active?.classList.remove("items-content-main-grams-btn-variant-active");
         btn.classList.add("items-content-main-grams-btn-variant-active");
-        
+        this._updateQueryParam("variantId", btn.dataset.variantid);
 
-        // reset quantity to 1 when variant changes
+        // reset quantity and update url param
         if (this._nodes.quantityValue) {
           this._nodes.quantityValue.textContent = "1";
           this._updateQueryParam("quantity", 1);
         }
         this._updateQueryParam("weight", btn.dataset.quantity);
 
-        this._helperFindAlreadyInCart(cartAdded, this._nodes.addCartBtn, btn.dataset.quantity)
+        // update add-to-cart button state
+        this._helperFindAlreadyInCart(cartAdded, this._nodes.addCartBtn, btn.dataset.quantity);
       });
     }
 
-    // Quantity buttons (delegation)
+    // quantity buttons
     this._nodes.quantityBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const change = Number(btn.dataset.value) || 0;
         if (!this._nodes.quantityValue) return;
+        const change = Number(btn.dataset.value) || 0;
         let value = Number(this._nodes.quantityValue.textContent) || 1;
         if (value + change >= 1) {
           value += change;
@@ -369,101 +404,128 @@ class SingleProductView extends view {
       });
     });
 
-    // Setup Add-to-cart logic
+    // add-to-cart
     this._setupAddToCart(id, variants, apiUrl, callFn, cartAdded);
   }
 
+  _helperFindAlreadyInCart(cartAdded = [], btn, weight) {
+    if (!btn) return false;
+    const quantityContainer = this._nodes?.quantityContainer;
+    const alreadyInCart = Array.isArray(cartAdded) && cartAdded.some((item) => {
+      // normalize both to string to be safe
+      //check weight i already selected 
+      let check = String(item.weight) === String(weight);
+      // if already slect the weight then need to add quntiry in params 
+      if( check) this._updateQueryParam("quantity", item.quantity)
 
-  
-  
+      return check;
 
+    });
 
+    if (alreadyInCart) {
+      btn.textContent = "GO TO CART";
+      btn.dataset.checkBtn = "true";
 
-  _setupAddToCart(id, variants = [], apiUrl, callFn, cartAdded) {
-    const btn = this._nodes.addCartBtn;
-    const quantityContainer = this._nodes.quantityContainer;
-  let getWeight = this._getQueryParam("weight");
-  let getQuantity = this._getQueryParam("quantity") || "1";
+      if (quantityContainer) quantityContainer.style.display = "none";
+      return true;
+    } else {
+      btn.textContent = "ADD TO CART";
+      btn.dataset.checkBtn = "false";
+      if (quantityContainer) quantityContainer.style.display = "block";
+      return false;
+    }
+  }
 
-
+  _setupAddToCart(id, variants = [], apiUrl, callFn, cartAdded = []) {
+    const btn = this._nodes?.addCartBtn;
+    const quantityContainer = this._nodes?.quantityContainer;
     if (!btn) return;
 
-    // Setup dataset checkBtn based on cartAdded
+    // Initialize state depending on URL or cart
+    const currentWeight = this._getQueryParam("weight");
+    this._helperFindAlreadyInCart(cartAdded, btn, currentWeight);
 
-    const allreadyInCart = this._helperFindAlreadyInCart(cartAdded, btn, getWeight, quantityContainer);
-
-
-
-    // Normalize dataset.checkBtn to string 'true'/'false'
-    // HTML attribute should be data-check-btn="true" (recommended). But we accept either.
-    // If cartAdded true, user should be taken to cart — so set dataset to "false" meaning "no add action".
- 
-
-    // Single click handler: always read current dataset inside handler (avoid stale closure)
     btn.addEventListener("click", async (e) => {
-
-         getWeight = this._getQueryParam("weight");
-   getQuantity = this._getQueryParam("quantity") || "1";
-
-      console.log("Add to cart clicked");
       e.preventDefault();
+      // read current state fresh
+      const weight = this._getQueryParam("weight");
+      const quantity = Number(this._getQueryParam("quantity") || (this._nodes?.quantityValue?.textContent) || 1);
+      const isInCart = btn.dataset.checkBtn === "true";
 
-
-
-      const currentCheck = btn.checkBtn === "true"; // boolean
-      // If checkBtn is false -> treat as "go to cart" action
-      if (currentCheck) {
-        // redirect immediately
+      if (isInCart) {
         window.location.href = "/cart";
         return;
       }
 
-      // Prevent double-clicks
       if (btn.disabled) return;
       btn.disabled = true;
       const origText = btn.textContent;
       btn.textContent = "Adding...";
 
-      // Resolve selected weight and quantity (from URL query params)
-    
-            // Find variant
-      const selectedVariant = variants.find((v) => String(v.weight?.value) === String(getWeight)) || variants[0];
+      // find selected variant by matching weight
+      const selectedVariant = variants.find((v) => String(v.weight?.value) === String(weight)) || variants[0];
       if (!selectedVariant) {
-        console.warn("No variant found for weight:", getWeight);
-        // restore state and return
+        console.warn("No variant found for weight:", weight);
         btn.disabled = false;
         btn.textContent = origText;
         return;
       }
 
-      console.log("Selected variant for add to cart:", selectedVariant, getWeight, getQuantity);
-
       const cartItem = {
         itemId: id,
-        variantId: selectedVariant.id,
-        quantity: getQuantity || 1,
-        weight: this._getQueryParam("weight"),
+        variantId: selectedVariant.id || selectedVariant.variantId,
+        quantity,
+        weight: String(weight),
       };
 
       try {
-        // Prefer await and handle errors
         const res = await callFn({ url: `${apiUrl}add-cart`, body: cartItem });
-        console.log("Add-to-cart response:", res);
-
-        // If API says success, update UI to "GO TO CART"
+        // assume success shape; update UI
         btn.textContent = "GO TO CART";
+        btn.dataset.checkBtn = "true";
         if (quantityContainer) quantityContainer.style.display = "none";
       } catch (err) {
-        console.error("Failed to add to cart:", err);
-        // Provide retry option — show informative text
+        console.error("Add to cart failed", err);
         btn.textContent = "Add failed. Try again";
-        setTimeout(() => (btn.textContent = origText), 1600);
+        setTimeout(() => (btn.textContent = origText), 1500);
       } finally {
         btn.disabled = false;
       }
     });
   }
 
+  /* ============================================
+     Order button
+  ============================================= */
+
+   _handleOrderClick(paymentFn) {
+    const orderBtn = $(".items-content-main-btn-buyit");
+    if (!orderBtn) return;
+    orderBtn.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      // Placeholder: implement buy-now flow
+      console.log("Buy it clicked - implement buy flow");
+      const res = await paymentFn(`http://localhost:3000/api/v1/payment/order-create`)
+      console.log("Buy it clicked - implement ")
+    });
+  }
+
+  /* ============================
+     Utility helpers (assumed present)
+     ============================ */
+
+
+ _findPercentageOffer(MRP = 0, price = 0) {
+    if (!MRP || !price || MRP <= 0) return 0;
+    return Math.round(((MRP - price) / MRP) * 100);
+  }
+
+  _truncateToOneDecimal(num) {
+    return Math.round((num + Number.EPSILON) * 10) / 10;
+  }
 }
 
 export default new SingleProductView();
+
+
+

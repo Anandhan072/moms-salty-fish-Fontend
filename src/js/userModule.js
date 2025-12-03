@@ -1,5 +1,6 @@
 import { API_AUTH } from "./config";
 import { user_Profile } from "./controller";
+import { apiRequest } from "./helper";
 import APIClient from "./utils/apiClient";
 
 /* ============================================================
@@ -112,7 +113,7 @@ const TokenService = {
    AUTH HEADERS
 ============================================================ */
 
-const buildHeaders = () => ({
+export const buildHeaders = () => ({
   Authorization: `Bearer ${TokenService.access?.accessToken}`,
   "Device-ID": getDeviceId(),
 });
@@ -123,7 +124,7 @@ const buildHeaders = () => ({
 
 
 
-const OfflineService = {
+export const OfflineService = {
   isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
   queue: [],
 
@@ -296,7 +297,7 @@ console.log(user)
   userInfo.userDetails = user;
 };
 
-const requireActiveSession = async () => {
+export const requireActiveSession = async () => {
   const ok = await checkUserIsActive();
   if (!ok) throw new Error("Session invalid");
 };
@@ -356,11 +357,15 @@ export const deletCart = async (payload) => {
 ============================================================ */
 
 export const getUserAPI = async (url, options = {}) => {
+
+  
   const res = await APIClient.post(url, options.body || {});
   StorageService.set(STORAGE.USER, res.user);
   userInfo.userDetails = res.user;
   return res;
 };
+
+
 
 /* ============================================================
    SESSION WATCHER

@@ -3,68 +3,100 @@ import icons from "../../img/icon.svg";
 import view from "./view";
 import productItemView from "./productItemView";
 
+/* ---------------------------------------------------
+   🔥 Auto Image Optimizer — Cloudinary
+--------------------------------------------------- */
+function optimizeImage(url, w = 300, h = 300) {
+  if (!url || typeof url !== "string") return url;
+  const marker = "/upload/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+
+  const prefix = url.slice(0, idx + marker.length);
+  const suffix = url.slice(idx + marker.length);
+
+  return `${prefix}f_auto,q_auto,w_${w},h_${h},c_fill/${suffix}`;
+}
+
 class ProductCartView extends view {
   _parentElement;
+  _allItems = [];      // original list from DB
+  _filteredItems = []; // after filter
+  _filterFn = null;
+
+  /* ---------------------------------------------------
+     Build HTML with SVG icons
+  --------------------------------------------------- */
   _generateMarkup() {
-    const markup = this._data.replaceAll("%{icons}%", `${icons}`);
-    return `${markup}`;
+    return this._data.replaceAll("%{icons}%", `${icons}`);
   }
 
+  /* ---------------------------------------------------
+     Main Entry from Controller
+  --------------------------------------------------- */
   _prepperPage() {
     if (!this._subData) return;
 
-    this._urlContainer(this._subData.filterLength);
-    this._pageCount(this._subData.filteredItems);
-    this._filterCont(this._subData.filteredItems, this._subData.filterFun);
-    this._handelPageEvent(this._subData.filteredItems);
+    this._allItems = this._subData.filteredItems || [];
+    this._filteredItems = [...this._allItems];
+    this._filterFn = this._subData.filterFun;
+
+    // initialize pages
+    this._urlContainer(this._allItems.length);
+
+    this._renderCurrentPage();
+    this._pageCount();
+    this._filterCont(this._allItems, this._filterFn);
+    this._handelPageEvent(this._allItems);
   }
 
-  _urlContainer(page) {
+  /* ---------------------------------------------------
+     URL Breadcrumb Builder
+  --------------------------------------------------- */
+  _urlContainer(total) {
     const urlContEl = document.querySelector(".url-page-ul-link");
-
     this.findUrlLocation();
-
     const locs = this._loc || [];
-    let markup = "";
 
-    // Always add default Home
-    markup += `
-          <li class="url-page-li-link">
-            <a href="/home" class="url-page-a-link">Home</a>
-          </li>`;
+    let markup = `
+      <li class="url-page-li-link">
+        <a href="/home" class="url-page-a-link">Home</a>
+      </li>
+    `;
 
-    // Case: only one value or second value empty
     if (locs.length === 1 || !locs[1]) {
       if (locs[0]) {
         markup += `
-              <li class="url-page-li-link">
-                <a href="/${locs[0]}" class="url-page-a-link">${locs[0]}</a>
-              </li>`;
+          <li class="url-page-li-link">
+            <a href="/${locs[0]}" class="url-page-a-link">${locs[0]}</a>
+          </li>`;
       }
     } else {
-      // Otherwise loop all segments
       for (let i = 0; i < locs.length; i++) {
         const path = "/" + locs.slice(0, i + 1).join("/");
-
         markup += `
-              <li class="url-page-li-link">
-                <a href="${path}" class="url-page-a-link">${locs[i]}</a>
-              </li>`;
+          <li class="url-page-li-link">
+            <a href="${path}" class="url-page-a-link">${locs[i]}</a>
+          </li>`;
       }
     }
+
+    const totalPage = Math.ceil(total / PAGE_Count) || 1;
     this._updateQueryParam("count", 1);
-    this._updateQueryParam("total", page / PAGE_Count > 1 ? Math.ceil(page / PAGE_Count) : 1);
-    urlContEl.innerHTML = "";
-    urlContEl.innerHTML = `${markup}`;
+    this._updateQueryParam("total", totalPage);
+
+    urlContEl.innerHTML = markup;
   }
 
-  //pageCount
-
+  /* ---------------------------------------------------
+     Pagination Button Rendering
+  --------------------------------------------------- */
   _pageCount() {
     const pageCountEl = document.querySelector(".btn-page-section-count");
     const totalPage = Number(this._getQueryParam("total")) || 1;
     const currentPage = Number(this._getQueryParam("count")) || 1;
-    const maxButtons = 10; // max visible buttons
+
+    const maxButtons = 10;
     let startPage = 1;
     let endPage = totalPage;
 
@@ -79,212 +111,174 @@ class ProductCartView extends view {
     }
 
     let markup = "";
-
     for (let i = startPage; i <= endPage; i++) {
-      const activeClass = i === currentPage ? "active" : "";
+      const active = i === currentPage ? "active" : "";
       markup += `
-        <span class="btn-page-control-btn  ${
-          activeClass ? `btn-page-control-btn-${activeClass}` : ""
-        }" data-count="${i}">
+        <span class="btn-page-control-btn ${active ? `btn-page-control-btn-active` : ""}" 
+              data-count="${i}">
           ${i}
         </span>`;
     }
 
-    pageCountEl.innerHTML = "";
-    pageCountEl.innerHTML = `${markup}`;
+    pageCountEl.innerHTML = markup;
   }
 
-  _handelPageEvent(data) {
+  /* ---------------------------------------------------
+     MAIN — render only CURRENT PAGE Items
+  --------------------------------------------------- */
+  _renderCurrentPage() {
+    const currentPage = Number(this._getQueryParam("count")) || 1;
+
+    const start = (currentPage - 1) * PAGE_Count;
+    const end = start + PAGE_Count;
+
+    const pageItems = this._filteredItems.slice(start, end).map(p => ({
+      ...p,
+      image: optimizeImage(p.image, 300, 300), // 🔥 auto optimize cloudinary image
+    }));
+
+    console.log('ksjhdohkdbskjb')
+    productItemView.render(pageItems);
+  }
+
+  /* ---------------------------------------------------
+     Pagination Events (prev, next, number buttons)
+  --------------------------------------------------- */
+  _handelPageEvent() {
     const prevBtn = document.querySelector(".btn-page-section-preview-btn");
     const nextBtn = document.querySelector(".btn-page-section-next-btn");
 
-    if (!prevBtn || !nextBtn) return;
-
     const updateButtons = () => {
-      const currentPage = Number(this._getQueryParam("count")) || 1;
-      const totalPage = Number(this._getQueryParam("total")) || 1;
+      const current = Number(this._getQueryParam("count"));
+      const total = Number(this._getQueryParam("total"));
 
-      // Hide both buttons if no page or only 1 page
-      if (currentPage === "No Page" || totalPage <= 1) {
-        prevBtn.style.display = "none";
-        nextBtn.style.display = "none";
-        return;
-      }
-
-      prevBtn.style.display = currentPage > 1 ? "inline-block" : "none";
-      nextBtn.style.display = currentPage < totalPage ? "inline-block" : "none";
+      prevBtn.style.display = current > 1 ? "inline-block" : "none";
+      nextBtn.style.display = current < total ? "inline-block" : "none";
     };
 
     const changePage = (newPage) => {
       this._updateQueryParam("count", newPage);
-
-      this._pageCount(); // re-render page buttons (sliding window)
-
+      this._pageCount();
+      this._renderCurrentPage();
       updateButtons();
-
-      // Re-render products
-      if (data) productItemView.render(data);
     };
 
-    // Initial render
-    const currentPage = Number(this._getQueryParam("count")) || 1;
-    updateButtons();
-    productItemView.render(data);
-
-    // Browser back/forward
-    window.addEventListener("popstate", () => {
-      const currentPage = Number(this._getQueryParam("count")) || 1;
-      this.render();
-      updateButtons();
-      productItemView.render(data);
-    });
-
-    // Page buttons click
+    // Number buttons
     this._parentElement = document.querySelector(".btn-page-section-count");
     this._parentElement.addEventListener("click", (e) => {
-      const target = e.target.closest(".btn-page-control-btn");
-      if (!target) return;
-      changePage(Number(target.dataset.count));
+      const btn = e.target.closest(".btn-page-control-btn");
+      if (!btn) return;
+      changePage(Number(btn.dataset.count));
     });
 
-    // Previous button
+    // Prev
     prevBtn.addEventListener("click", () => {
-      const currentPage = Number(this._getQueryParam("count")) || 1;
-      if (currentPage > 1) changePage(currentPage - 1);
+      const cur = Number(this._getQueryParam("count"));
+      if (cur > 1) changePage(cur - 1);
     });
 
-    // Next button
+    // Next
     nextBtn.addEventListener("click", () => {
-      const currentPage = Number(this._getQueryParam("count")) || 1;
-      const totalPage = Number(this._getQueryParam("total")) || 1;
-      if (currentPage < totalPage) changePage(currentPage + 1);
+      const cur = Number(this._getQueryParam("count"));
+      const total = Number(this._getQueryParam("total"));
+      if (cur < total) changePage(cur + 1);
     });
+
+    updateButtons();
   }
+
+  /* ---------------------------------------------------
+     Query Param Helpers
+  --------------------------------------------------- */
   _getQueryParam(key) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(key);
+    return new URLSearchParams(window.location.search).get(key);
   }
+
   _updateQueryParam(key, value) {
     const url = new URL(window.location);
     url.searchParams.set(key, value);
     window.history.pushState({}, "", url);
   }
 
-  //filter option
-  _filterCont(val, fn) {
+  /* ---------------------------------------------------
+     Filtering System
+  --------------------------------------------------- */
+  _filterCont(items, fn) {
     const queryOption = {
       category: null,
       subcategory: null,
-      inStock: null, // "in-stock", "out-of-stock", or null
+      inStock: null,
       priceMin: 0,
       priceMax: MAX_PRICE,
-      sortBy: null, // "date", "price", "a-z", "z-a"
+      sortBy: null,
     };
 
-    let data = fn(val, queryOption);
+    const applyFilters = () => {
+      this._filteredItems = fn(items, queryOption);
+      const totalPage = Math.ceil(this._filteredItems.length / PAGE_Count) || 1;
+      this._updateQueryParam("total", totalPage);
+      this._updateQueryParam("count", 1);
 
-    /* ------------------------------
-           🔹 Helper: reset radio icons
-        -------------------------------*/
-    const resetIcons = (selector) => {
-      document.querySelectorAll(`${selector} use`).forEach((useEl) => {
-        useEl.setAttribute("href", "/src/img/icon.svg#icon-radio");
-      });
+      this._pageCount();
+      this._renderCurrentPage();
     };
 
-    /* ------------------------------
-           🔹 Availability Filter
-        -------------------------------*/
+    /* ------------------------
+       Availability Filter
+    ------------------------ */
     const sup_availability = document.querySelector(".available-filter-div");
-    const availability = document.querySelector(".filter-availability");
-    let activeStock = "all-item";
-
     sup_availability.addEventListener("click", (e) => {
       const clicked = e.target.closest(".available-filter-div-stock");
       if (!clicked) return;
 
-      const stockValue = clicked.dataset.stock;
-      if (stockValue === activeStock) return; // no change
+      const val = clicked.dataset.stock;
+      queryOption.inStock = val;
 
-      resetIcons(".available-filter-div-stock");
+      sup_availability.querySelectorAll("use").forEach(el =>
+        el.setAttribute("href", "/src/img/icon.svg#icon-radio")
+      );
 
-      const useIcon = clicked.querySelector("use");
-      if (useIcon) useIcon.setAttribute("href", "/src/img/icon.svg#icon-radio-check");
+      clicked.querySelector("use").setAttribute("href", "/src/img/icon.svg#icon-radio-check");
 
-      availability.dataset.stock = stockValue;
-      queryOption.inStock = stockValue;
-
-      data = fn(val, queryOption);
-      productItemView.render(data);
-
-      activeStock = stockValue;
+      applyFilters();
     });
 
-    /* ------------------------------
-           🔹 Price Filter
-        -------------------------------*/
-    const sub_Price = document.querySelector(".filter-price-div");
-
-    sub_Price.addEventListener("keydown", (e) => {
+    /* ------------------------
+       Price Filter
+    ------------------------ */
+    const subPrice = document.querySelector(".filter-price-div");
+    subPrice.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
 
-      let startVal = 0;
-      let endVal = MAX_PRICE;
+      const startInput = document.getElementById("filter-price-start");
+      const endInput = document.getElementById("filter-price-end");
 
-      document.querySelectorAll(".filter-price-div input").forEach((input) => {
-        if (input.id === "filter-price-start") {
-          startVal = parseInt(input.value, 10) || 0;
-          endVal = parseInt(document.getElementById("filter-price-end")?.value, 10) || MAX_PRICE;
+      const min = Number(startInput.value) || 0;
+      const max = Number(endInput.value) || MAX_PRICE;
 
-          if (startVal > endVal) input.value = endVal;
-          if (startVal < 0) input.value = 0;
+      queryOption.priceMin = min;
+      queryOption.priceMax = max;
 
-          startVal = parseInt(input.value, 10);
-        }
-
-        if (input.id === "filter-price-end") {
-          endVal = parseInt(input.value, 10) || MAX_PRICE;
-
-          if (endVal > MAX_PRICE) input.value = MAX_PRICE;
-
-          const startInput = document.getElementById("filter-price-start");
-          const startValCheck = parseInt(startInput?.value, 10) || 0;
-
-          if (endVal < startValCheck) input.value = startValCheck;
-
-          endVal = parseInt(input.value, 10);
-        }
-      });
-
-      queryOption.priceMin = startVal || 0;
-      queryOption.priceMax = endVal;
-
-      data = fn(val, queryOption);
-      productItemView.render(data);
+      applyFilters();
     });
 
-    /* ------------------------------
-           🔹 Sort Filter
-        -------------------------------*/
-    const sub_Sort = document.querySelector(".filter-sort-by-div");
-    const sort = document.querySelector(".filter-sort-by");
-
-    sub_Sort.addEventListener("click", (e) => {
+    /* ------------------------
+       Sort Filter
+    ------------------------ */
+    const subSort = document.querySelector(".filter-sort-by-div");
+    subSort.addEventListener("click", (e) => {
       const el = e.target.closest(".filter-sort-by-div-name");
       if (!el) return;
 
       const sortType = el.dataset.method;
-
-      resetIcons(".filter-sort-by-div-name");
-
-      const useIcon = el.querySelector("use");
-      if (useIcon) useIcon.setAttribute("href", "/src/img/icon.svg#icon-radio-check");
-
       queryOption.sortBy = sortType;
-      sort.dataset.method = sortType;
 
-      data = fn(val, queryOption);
-      productItemView.render(data);
+      subSort.querySelectorAll("use").forEach(el =>
+        el.setAttribute("href", "/src/img/icon.svg#icon-radio")
+      );
+      el.querySelector("use").setAttribute("href", "/src/img/icon.svg#icon-radio-check");
+
+      applyFilters();
     });
   }
 }

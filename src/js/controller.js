@@ -1,4 +1,5 @@
 import { defautlErrorEl } from "./utils/dom";
+import {paymentFn} from "./utils/paymets";
 import * as ProductModule from "./productModule";
 import * as userProfile from "./userModule";
 import * as config from "./config";
@@ -56,7 +57,7 @@ export const commonViewControllerHome = async () => {
 };
 
 /**
- * Renders the default category/product navigation
+ * Renders the default category/product navigation link
  */
 export const defaultProdNav = async () => {
   try {
@@ -101,6 +102,8 @@ export const homePage = async () => {
  */
 export const allProduct = async () => {
   try {
+
+
     const loc = await ProductModule.findUrlLocation(); // e.g. ["", "fish", "salmon"]
     if (!loc || !Array.isArray(loc)) throw new Error("Invalid URL structure.");
 
@@ -149,7 +152,9 @@ export const singleProduct = async () => {
       productInfo: items,
       apiUrl: config.API_USER,
       callFn: userProfile.addCartItem,
-      cartAdded: cartFind   // convert to true/false
+   
+      cartAdded: cartFind,   // convert to true/false
+      payment:paymentFn,
     };
 
     await singleProductView.render(htmlEl, "#main", data);
