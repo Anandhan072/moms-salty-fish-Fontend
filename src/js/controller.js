@@ -263,3 +263,7 @@ export const cartController = async () => {
     cartView.render(htmlEl, "#main", data);
   } catch (error) {}
 };
+
+
+
+

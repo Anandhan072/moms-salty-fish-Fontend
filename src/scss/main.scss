@@ -9,6 +9,8 @@
 @use "userprofile";
 @use "cart";
 @use "error";
+@use "lacy";
+
 
 * {
   padding: 0; // Removed percentage to avoid confusion, just use 0

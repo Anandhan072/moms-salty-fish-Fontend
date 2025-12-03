@@ -13,6 +13,20 @@ export const showError = (msg, container) => {
 
 
 
+export const  optimizeImage = (url, w = 300, h = 300) => {
+  if (!url || typeof url !== "string") return url;
+  const marker = "/upload/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+
+  const prefix = url.slice(0, idx + marker.length);
+  const suffix = url.slice(idx + marker.length);
+
+  return `${prefix}f_auto,q_auto,w_${w},h_${h},c_fill/${suffix}`;
+}
+
+
+
 export const defautlErrorEl = `<div id="main-error">
     <div class="error-container">
     <div class="error-content">

@@ -1,6 +1,5 @@
 import { API_AUTH } from "./config";
-import { user_Profile } from "./controller";
-import { apiRequest } from "./helper";
+import { user_Profile } from "./controller"; 
 import APIClient from "./utils/apiClient";
 
 /* ============================================================

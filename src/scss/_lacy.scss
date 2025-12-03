@@ -1,0 +1,22 @@
+#render-lacy-load {
+ width: 100vw;
+ height: 100vh;
+ overflow: hidden;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+
+ .lacy-load-img{
+      animation: rotate360 1.2s linear infinite;
+  transform-origin: center;
+ }
+
+ @keyframes rotate360 {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+}

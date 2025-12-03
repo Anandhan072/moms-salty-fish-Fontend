@@ -1,4 +1,5 @@
 import { PAGE_Count, MAX_PRICE } from "../config";
+import {optimizeImage} from "../utils/dom"
 import icons from "../../img/icon.svg";
 import view from "./view";
 import productItemView from "./productItemView";
@@ -6,17 +7,7 @@ import productItemView from "./productItemView";
 /* ---------------------------------------------------
    🔥 Auto Image Optimizer — Cloudinary
 --------------------------------------------------- */
-function optimizeImage(url, w = 300, h = 300) {
-  if (!url || typeof url !== "string") return url;
-  const marker = "/upload/";
-  const idx = url.indexOf(marker);
-  if (idx === -1) return url;
 
-  const prefix = url.slice(0, idx + marker.length);
-  const suffix = url.slice(idx + marker.length);
-
-  return `${prefix}f_auto,q_auto,w_${w},h_${h},c_fill/${suffix}`;
-}
 
 class ProductCartView extends view {
   _parentElement;
@@ -145,6 +136,7 @@ class ProductCartView extends view {
      Pagination Events (prev, next, number buttons)
   --------------------------------------------------- */
   _handelPageEvent() {
+    console.log('kjshiuh')
     const prevBtn = document.querySelector(".btn-page-section-preview-btn");
     const nextBtn = document.querySelector(".btn-page-section-next-btn");
 
@@ -284,3 +276,6 @@ class ProductCartView extends view {
 }
 
 export default new ProductCartView();
+
+
+
