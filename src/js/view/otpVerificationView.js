@@ -1,7 +1,8 @@
 // OtpVerification.js
+import {$, $$} from "../utils/dom"
 import icons from "../../img/icon.svg";
 import view from "./view";
-import { Serret_Code } from "../config";
+
 
 class OtpVerification extends view {
   /* =======================================================
@@ -117,8 +118,22 @@ class OtpVerification extends view {
           window.location.assign(redirectUrl);
         }, 3000);
       } catch (err) {
-        console.error("❌ OTP verification error:", err);
-        alert("Invalid or expired OTP. Please try again.");
+        const otpInputs = $(".otp-verification-input-section");
+
+          const el = document.createElement("span");
+          el.classList.add("otp-error-message");
+          el.textContent = "OTP is Not Valid";
+
+          otpInputs.append(el);
+
+        // optional: fade-out instead of sudden hide
+        setTimeout(() => {
+           el.style.opacity = "0";
+          el.style.transition = "opacity .4s ease";
+         setTimeout(() => el.remove(), 400); // remove fully after fade
+          }, 5000);
+
+        
       }
     });
   }
@@ -180,3 +195,5 @@ class OtpVerification extends view {
 }
 
 export default new OtpVerification();
+
+

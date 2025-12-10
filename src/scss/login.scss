@@ -22,8 +22,8 @@
     margin-top: 10rem;
     .login-page-container {
       position: relative;
-      width: 40rem;
-      height: 50rem;
+      width: 45rem;
+      height: 53rem;
       background-color: rgb(variables.$filter_font_color, 0.2);
       .login-page-main {
         padding: 1rem;
@@ -39,23 +39,29 @@
         .login-page-moms-text {
           position: relative;
           top: 10px;
-          font-family: variables.$logo_font;
+           @include mixin.header-font;
+           margin-left: 2rem;
+           line-height: 4rem;
+           
+ 
           color: variables.$logo_color;
           .login-page-moms-text-head {
             letter-spacing: 1px;
             font-size: 3rem;
+            letter-spacing: 5px;
           }
           .login-page-moms-text-paragrap {
             position: relative;
             font-size: 1.9rem;
             top: -17px;
             left: -1px;
+            letter-spacing: 2px
           }
         }
       }
       .login-page-input {
-        font-family: variables.$about_moms_font;
-        padding: 4rem;
+       @include mixin.header-font;
+        padding: 2rem;
         .login-page-input-text {
           font-size: 2.5rem;
           opacity: 0.8;
@@ -79,6 +85,7 @@
           }
           #email_id {
             font-size: 1.3rem;
+            @include mixin.description-font;
           }
 
           .submit-el {
@@ -93,7 +100,8 @@
         font-size: 1.3rem;
         text-align: center;
         width: 100%;
-        a {
+        @include mixin.description-font;
+                a {
           color: variables.$filter_font_color;
         }
       }
@@ -103,24 +111,31 @@
 
 .otp-verification {
   padding: 4rem;
-  color: variables.$offer_font_color;
   .otp-verification-main {
     .otp-verification-text {
       font-size: 1.3rem;
+      @include mixin.description-font;
     }
     .otp-verification-change-email {
-      margin-top: 1rem;
-      font-family: variables.$font-otp-change;
+      margin-top: 0.5rem;
+      @include mixin.header-small;
+      width: fit-content;
+
+      &:hover{
+        color: variables.$offer_font_color;
+      }
+     
     }
     .otp-verification-input-section {
-      margin-top: 3rem;
+      margin-top: 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       .otp-verification-input {
         width: 4rem;
         height: 5rem;
-        font-size: 2.4rem;
+        font-size: 2rem;
         text-align: center;
         border: 2px solid rgb(variables.$offer_font_color, 0.2);
         border-radius: 8px;
@@ -133,18 +148,34 @@
           outline: none;
         }
       }
+
+      .otp-error-message{
+        display: block !important;
+        width: 100%;
+        color: variables.$erro-colour;
+        @include mixin.description-font;
+        font-size: 1.3rem;
+        margin-top: 1rem;
+        
+      }
     }
     .otp-verification-resend-otp {
       margin-top: 1rem;
-      font-family: variables.$font-otp-change;
+       @include mixin.header-small;
+
+        width: fit-content;
+
+      &:hover{
+        color: variables.$offer_font_color;
+      }
+     
     }
 
     .otp-verification-otp-verify {
-      margin-top: 4rem;
+      margin-top: 2rem;
       button {
         width: 100%;
         padding: 1rem 2rem;
-        font-family: variables.$font-otp-change;
         color: variables.$white;
         font-size: 2rem;
         border: none;

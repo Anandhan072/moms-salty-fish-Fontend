@@ -1,16 +1,4 @@
 @charset "UTF-8";
-@import url("https://fonts.googleapis.com/css?family=Anonymous Pro");
-@import url("https://fonts.googleapis.com/css?family=Farro");
-@import url("https://fonts.googleapis.com/css?family=Beiruti");
-@import url("https://fonts.googleapis.com/css?family=Armata");
-@import url("https://fonts.googleapis.com/css?family=Doppio One");
-@import url("https://fonts.googleapis.com/css?family=Bungee Hairline");
-@import url("https://fonts.googleapis.com/css?family=Encode Sans Semi Expanded");
-@import url("https://fonts.googleapis.com/css?family=Francois One");
-@import url("https://fonts.googleapis.com/css?family=Suez One");
-@import url("https://fonts.googleapis.com/css?family=Alatsi");
-@import url("https://fonts.googleapis.com/css?family=Hubballi");
-@import url("https://fonts.googleapis.com/css?family=Kanit");
 #header-group {
   display: block;
   position: relative;
@@ -1641,8 +1629,8 @@
 }
 #main-login #login-container .login-page-container {
   position: relative;
-  width: 40rem;
-  height: 50rem;
+  width: 45rem;
+  height: 53rem;
   background-color: rgba(254, 179, 41, 0.2);
 }
 #main-login #login-container .login-page-container .login-page-main {
@@ -1657,22 +1645,28 @@
 #main-login #login-container .login-page-container .login-page-main .login-page-moms-text {
   position: relative;
   top: 10px;
-  font-family: "Suez One";
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  margin-left: 2rem;
+  line-height: 4rem;
   color: #241301;
 }
 #main-login #login-container .login-page-container .login-page-main .login-page-moms-text .login-page-moms-text-head {
   letter-spacing: 1px;
   font-size: 3rem;
+  letter-spacing: 5px;
 }
 #main-login #login-container .login-page-container .login-page-main .login-page-moms-text .login-page-moms-text-paragrap {
   position: relative;
   font-size: 1.9rem;
   top: -17px;
   left: -1px;
+  letter-spacing: 2px;
 }
 #main-login #login-container .login-page-container .login-page-input {
-  font-family: "Beiruti";
-  padding: 4rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  padding: 2rem;
 }
 #main-login #login-container .login-page-container .login-page-input .login-page-input-text {
   font-size: 2.5rem;
@@ -1697,6 +1691,8 @@
 }
 #main-login #login-container .login-page-container .login-page-input .login-page-input-form-cont #email_id {
   font-size: 1.3rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
 }
 #main-login #login-container .login-page-container .login-page-input .login-page-input-form-cont .submit-el {
   background: #feb329;
@@ -1708,6 +1704,8 @@
   font-size: 1.3rem;
   text-align: center;
   width: 100%;
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
 }
 #main-login #login-container .login-page-container .login-terms-policy a {
   color: #FEB329;
@@ -1715,25 +1713,32 @@
 
 .otp-verification {
   padding: 4rem;
-  color: #FEB329;
 }
 .otp-verification .otp-verification-main .otp-verification-text {
   font-size: 1.3rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
 }
 .otp-verification .otp-verification-main .otp-verification-change-email {
-  margin-top: 1rem;
-  font-family: "Alatsi";
+  margin-top: 0.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  width: fit-content;
+}
+.otp-verification .otp-verification-main .otp-verification-change-email:hover {
+  color: #FEB329;
 }
 .otp-verification .otp-verification-main .otp-verification-input-section {
-  margin-top: 3rem;
+  margin-top: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 .otp-verification .otp-verification-main .otp-verification-input-section .otp-verification-input {
   width: 4rem;
   height: 5rem;
-  font-size: 2.4rem;
+  font-size: 2rem;
   text-align: center;
   border: 2px solid rgba(254, 179, 41, 0.2);
   border-radius: 8px;
@@ -1746,17 +1751,30 @@
   box-shadow: 0 0 5px #FEB329, 1;
   outline: none;
 }
+.otp-verification .otp-verification-main .otp-verification-input-section .otp-error-message {
+  display: block !important;
+  width: 100%;
+  color: rgb(255, 39, 39);
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
+  font-size: 1.3rem;
+  margin-top: 1rem;
+}
 .otp-verification .otp-verification-main .otp-verification-resend-otp {
   margin-top: 1rem;
-  font-family: "Alatsi";
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  width: fit-content;
+}
+.otp-verification .otp-verification-main .otp-verification-resend-otp:hover {
+  color: #FEB329;
 }
 .otp-verification .otp-verification-main .otp-verification-otp-verify {
-  margin-top: 4rem;
+  margin-top: 2rem;
 }
 .otp-verification .otp-verification-main .otp-verification-otp-verify button {
   width: 100%;
   padding: 1rem 2rem;
-  font-family: "Alatsi";
   color: white;
   font-size: 2rem;
   border: none;
